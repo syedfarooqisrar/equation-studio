@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Equation Studio</title>
+<script src="mathlive.min.js"></script>
+<style>
+:root{
+  --font:'Inter','Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;
+  --bg:#f5f6f8; --surface:#ffffff; --surface-2:#f3f4f7; --border:#e3e6ec; --border-strong:#cfd4dd;
+  --text:#111827; --muted:#6b7280; --faint:#9ca3af;
+  --accent:#6d4de0; --accent-hover:#5f3fd0; --accent-soft:#f0ecff; --accent-border:#d6c9ff;
+  --danger:#d92d20; --success:#12b76a;
+  --r-sm:6px; --r-md:10px; --r-lg:14px;
+  --sh-sm:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);
+  --sh-lg:0 14px 30px -6px rgba(16,24,40,.20),0 4px 8px -4px rgba(16,24,40,.08);
+  --ease:cubic-bezier(.2,.8,.2,1); --doc-size:18px;
+}
+[data-theme="dark"]{
+  --bg:#0e1015; --surface:#171a21; --surface-2:#20242d; --border:#2a2f3a; --border-strong:#3a4050;
+  --text:#e8eaf0; --muted:#9aa3b2; --faint:#6b7280;
+  --accent:#a18bff; --accent-hover:#b3a1ff; --accent-soft:#272145; --accent-border:#4b3f90;
+  --danger:#ff6b60;
+  --sh-sm:0 1px 2px rgba(0,0,0,.4); --sh-lg:0 14px 30px -6px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg)}
+body{font-family:var(--font);color:var(--text);font-size:14px;-webkit-font-smoothing:antialiased}
+button{font-family:inherit}
+svg{display:block}
+.hidden{display:none!important}
+.app{max-width:1180px;margin:0 auto;padding:16px 18px 14px;display:flex;flex-direction:column;gap:12px}
+
+/* Header */
+.app-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.logo{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#8a6fff,#5a35d8);color:#fff;display:grid;place-items:center;font-size:20px;font-weight:700;box-shadow:var(--sh-sm);flex-shrink:0}
+.brand-title{font-size:16px;font-weight:700;letter-spacing:-.2px}
+.brand-sub{font-size:12px;color:var(--muted)}
+.header-actions{display:flex;align-items:center;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:20px;background:var(--surface);border:1px solid var(--border);font-size:12px;color:var(--muted);margin-right:4px}
+.chip .dot{width:7px;height:7px;border-radius:50%;background:var(--success)}
+.chip.saving .dot{background:#f79009}
+.icon-btn{width:36px;height:36px;border-radius:var(--r-md);border:1px solid var(--border);background:var(--surface);color:var(--muted);display:grid;place-items:center;cursor:pointer;transition:all .15s var(--ease)}
+.icon-btn:hover{color:var(--text);background:var(--surface-2)}
+.icon-btn.active{color:var(--accent);background:var(--accent-soft);border-color:var(--accent-border)}
+
+/* Buttons */
+.action-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.spacer{flex:1}
+.btn{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 14px;border-radius:var(--r-md);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13.5px;font-weight:600;cursor:pointer;box-shadow:var(--sh-sm);transition:all .15s var(--ease)}
+.btn:hover{background:var(--surface-2)}
+.btn:active{transform:scale(.98)}
+.btn.is-active{background:var(--accent-soft);border-color:var(--accent-border);color:var(--accent)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-hover)}
+.btn-dark{background:var(--text);border-color:var(--text);color:var(--surface)}
+.btn-dark:hover{background:var(--text);opacity:.9}
+.btn-danger:hover{color:var(--danger);border-color:var(--danger);background:var(--surface)}
+.btn:focus-visible,.icon-btn:focus-visible,.fmt:focus-visible,.rbtn:focus-visible,.tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Format bar */
+.format-bar{display:flex;flex-wrap:wrap;align-items:center;gap:2px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:6px 8px;box-shadow:var(--sh-sm)}
+.fmt{min-width:32px;height:32px;padding:0 8px;border:none;background:transparent;border-radius:var(--r-sm);color:var(--text);cursor:pointer;display:grid;place-items:center;font-size:14px;transition:background .12s}
+.fmt:hover:not(:disabled){background:var(--surface-2)}
+.fmt.active{background:var(--accent-soft);color:var(--accent)}
+.fmt:disabled{opacity:.35;cursor:default}
+.sep{width:1px;height:20px;background:var(--border);margin:0 6px}
+.swatch{width:18px;height:18px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--border-strong);cursor:pointer;margin:0 3px;padding:0}
+.swatch:hover{transform:scale(1.15)}
+
+/* Ribbon */
+.ribbon{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh-sm)}
+.ribbon-tabs{display:flex;gap:2px;padding:6px 10px 0;border-bottom:1px solid var(--border)}
+.tab{border:none;background:transparent;padding:8px 14px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.ribbon-scroll{display:flex;align-items:stretch;overflow-x:auto;padding:8px 8px 6px;scrollbar-width:thin}
+.ribbon-scroll::-webkit-scrollbar{height:6px}
+.ribbon-scroll::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:4px}
+.rgroup{display:flex;flex-direction:column;align-items:center;padding:0 12px;border-right:1px solid var(--border);flex-shrink:0}
+.rgroup:last-child{border-right:none}
+.rgroup-items{display:flex;gap:2px;flex:1;align-items:flex-start}
+.rgroup-label{font-size:10.5px;color:var(--faint);margin-top:6px;white-space:nowrap}
+.rbtn{display:flex;flex-direction:column;align-items:center;gap:4px;border:none;background:transparent;cursor:pointer;padding:6px 10px;border-radius:var(--r-sm);min-width:62px;color:var(--text);transition:background .12s}
+.rbtn:hover{background:var(--surface-2)}
+.rbtn.is-active{background:var(--accent-soft);color:var(--accent)}
+.rbtn .ri{height:26px;display:flex;align-items:center;font-size:20px;line-height:1}
+.rbtn .ri .ico-text{font-size:17px}
+.rbtn .rl{font-size:11px;font-weight:500;color:var(--muted);white-space:nowrap;display:flex;align-items:center;gap:3px}
+.rbtn .rl::after{content:"";border-left:3px solid transparent;border-right:3px solid transparent;border-top:4px solid currentColor;opacity:.6}
+.rbtn.is-active .rl{color:var(--accent)}
+
+/* Symbols tab */
+.sym-toolbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:10px 12px 4px}
+.chip-btn{height:28px;padding:0 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer}
+.chip-btn:hover{color:var(--text);background:var(--surface-2)}
+.chip-btn.active{background:var(--accent-soft);border-color:var(--accent-border);color:var(--accent)}
+.sym-search{margin-left:auto;height:30px;width:170px;max-width:100%;padding:0 10px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface-2);color:var(--text);font-size:12.5px;outline:none}
+.sym-search:focus{border-color:var(--accent);background:var(--surface)}
+.sym-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(40px,1fr));gap:4px;padding:6px 12px 12px;max-height:150px;overflow-y:auto}
+.sym{height:36px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);color:var(--text);font-size:16px;cursor:pointer;transition:all .1s}
+.sym:hover{background:var(--accent-soft);border-color:var(--accent-border);color:var(--accent)}
+.sym-empty{grid-column:1/-1;color:var(--faint);font-size:12.5px;padding:8px 2px}
+
+/* Dropdown panels */
+.dropdown-panel{display:none;position:fixed;top:0;left:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh-lg);padding:14px;z-index:9999;width:max-content;min-width:200px;overflow:auto;color:var(--text)}
+.dropdown-panel.open{display:block;animation:pop .16s var(--ease)}
+@keyframes pop{from{opacity:0;transform:translateY(-8px) scale(.97)}to{opacity:1;transform:none}}
+.panel-title{font-size:11px;font-weight:700;color:var(--faint);margin:2px 0 10px 2px;text-transform:uppercase;letter-spacing:.7px}
+.panel-title:not(:first-child){margin-top:14px}
+.panel-grid{display:grid;gap:8px}
+.dd-item{border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface-2);padding:8px 6px;cursor:pointer;display:flex;align-items:center;justify-content:center;min-height:46px;overflow:hidden;transition:all .12s}
+.dd-item:hover{background:var(--accent-soft);border-color:var(--accent-border)}
+.dd-item:active{transform:scale(.96)}
+.dd-item math-field{pointer-events:none;border:none!important;background:transparent!important;font-size:14px;max-width:100%;color:var(--text)}
+.menu-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r-sm);cursor:pointer;font-size:13px;font-weight:500;white-space:nowrap}
+.menu-item:hover{background:var(--accent-soft);color:var(--accent)}
+.menu-item small{color:var(--faint);margin-left:auto;padding-left:18px;font-weight:400}
+
+/* Document */
+.doc-wrap{position:relative}
+#documentArea{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--r-lg);padding:30px 36px;min-height:380px;font-size:var(--doc-size);line-height:1.85;outline:none;overflow-wrap:anywhere;box-shadow:var(--sh-sm);transition:border-color .18s,box-shadow .18s}
+#documentArea:focus-within{border-color:var(--accent-border);box-shadow:0 0 0 4px var(--accent-soft),var(--sh-sm)}
+#documentArea p{margin:0 0 10px}
+#documentArea ul{margin:0 0 10px;padding-left:26px}
+.doc-hint{position:absolute;left:36px;top:30px;color:var(--faint);pointer-events:none;font-size:var(--doc-size);line-height:1.85;display:none}
+.doc-wrap.is-empty .doc-hint{display:block}
+#documentArea math-field{display:inline-block;vertical-align:middle;border:1px solid transparent;border-radius:6px;padding:2px 8px;margin:0 3px;font-size:1em;min-width:26px;max-width:100%;background:transparent;color:inherit;transition:border-color .14s,background .14s}
+#documentArea math-field:hover{border-color:var(--border-strong)}
+#documentArea math-field:focus-within{border-color:var(--accent);background:var(--accent-soft)}
+math-field::part(virtual-keyboard-toggle),math-field::part(menu-toggle){display:none!important}
+
+/* Status bar */
+.status-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--muted);font-size:12px;padding:0 4px;flex-wrap:wrap}
+.status-bar b{color:var(--text)}
+.zoom{display:flex;align-items:center;gap:4px}
+.zoom button{width:26px;height:26px;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;font-size:15px;line-height:1}
+.zoom button:hover{background:var(--surface-2)}
+.zoom span{min-width:42px;text-align:center}
+
+/* Toast */
+#toastNotification{position:fixed;top:20px;right:20px;background:#101828;color:#fff;padding:12px 18px;border-radius:var(--r-md);font-size:14px;font-weight:500;box-shadow:var(--sh-lg);display:flex;align-items:center;gap:10px;z-index:99999;opacity:0;transform:translateY(-10px);pointer-events:none;transition:opacity .2s,transform .2s}
+#toastNotification.show{opacity:1;transform:none}
+.toast-icon{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;background:var(--success);color:#fff}
+#toastNotification[data-type="warn"] .toast-icon{background:#f79009}
+#toastNotification[data-type="error"] .toast-icon{background:#f04438}
+
+/* Help modal */
+#helpModal{position:fixed;inset:0;background:rgba(10,12,18,.5);display:none;align-items:center;justify-content:center;z-index:100000;padding:16px}
+#helpModal.open{display:flex}
+.modal-card{background:var(--surface);color:var(--text);border-radius:var(--r-lg);box-shadow:var(--sh-lg);padding:22px 24px;width:460px;max-width:100%;max-height:90vh;overflow:auto}
+.modal-card h3{margin:0 0 12px;font-size:16px}
+.kb-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px}
+.kb-row:last-of-type{border-bottom:none}
+kbd{background:var(--surface-2);border:1px solid var(--border-strong);border-bottom-width:2px;border-radius:5px;padding:2px 7px;font-size:11.5px;font-family:inherit}
+
+/* Clean capture mode (screenshot is always light and clean) */
+body.capturing .doc-hint{display:none!important}
+body.capturing #documentArea{background:#fff!important;color:#111!important;border-color:transparent!important;box-shadow:none!important;caret-color:transparent}
+body.capturing #documentArea math-field{color:#111!important;border-color:transparent!important;background:transparent!important}
+
+@media (max-width:760px){
+  .app{padding:10px}
+  .btn .txt{display:none}
+  .btn-primary .txt,.btn-dark .txt{display:inline}
+  .sym-search{margin-left:0;width:100%}
+  #documentArea{padding:20px 18px}
+  .doc-hint{left:18px;top:20px}
+  .brand-sub,.chip .chip-text{display:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="app-header no-focus-steal">
+    <div class="brand">
+      <div class="logo">∑</div>
+      <div><div class="brand-title">Equation Studio</div><div class="brand-sub">Write · Solve · Copy as image</div></div>
+    </div>
+    <div class="header-actions">
+      <span class="chip" id="saveChip"><span class="dot"></span><span class="chip-text" id="saveText">Saved</span></span>
+      <button class="icon-btn active" id="pinBtn" title="Keep window on top"><span data-icon="pin"></span></button>
+      <button class="icon-btn" id="themeBtn" title="Dark / light mode"><span data-icon="moon"></span></button>
+      <button class="icon-btn" id="helpBtn" title="Keyboard shortcuts"><span data-icon="help"></span></button>
+    </div>
+  </header>
+
+  <section class="action-bar no-focus-steal">
+    <button class="btn btn-primary" id="insertEquationBtn" title="Ctrl+E"><span data-icon="plus" data-size="16"></span><span class="txt">Insert Equation</span></button>
+    <button class="btn" id="nextStepBtn" title="Alt+N"><span data-icon="step" data-size="16"></span><span class="txt">Next Step</span></button>
+    <button class="btn" id="snippetsBtn"><span data-icon="list" data-size="16"></span><span class="txt">Snippets</span></button>
+    <div class="spacer"></div>
+    <button class="btn" id="copyLatexBtn" title="Ctrl+Shift+L"><span data-icon="code" data-size="16"></span><span class="txt">Copy LaTeX</span></button>
+    <button class="btn btn-danger" id="delEqBtn" title="Delete the selected equation"><span data-icon="trash" data-size="16"></span><span class="txt">Delete Equation</span></button>
+    <button class="btn btn-danger" id="clearBtn" title="Clear the whole document"><span data-icon="x" data-size="16"></span><span class="txt">Clear</span></button>
+    <button class="btn btn-dark" id="screenshotBtn" title="Ctrl+Shift+C"><span data-icon="image" data-size="16"></span><span class="txt">Copy as Image</span></button>
+  </section>
+
+  <section class="format-bar no-focus-steal">
+    <button class="fmt" id="undoBtn" title="Undo (Ctrl+Z)"><span data-icon="undo" data-size="16"></span></button>
+    <button class="fmt" id="redoBtn" title="Redo (Ctrl+Y)"><span data-icon="redo" data-size="16"></span></button>
+    <span class="sep"></span>
+    <button class="fmt" data-cmd="bold" title="Bold (Ctrl+B)"><b>B</b></button>
+    <button class="fmt" data-cmd="italic" title="Italic (Ctrl+I)"><i style="font-family:serif">I</i></button>
+    <button class="fmt" data-cmd="underline" title="Underline (Ctrl+U)"><u>U</u></button>
+    <span class="sep"></span>
+    <span id="swatches"></span>
+    <button class="fmt" id="clearFmtBtn" title="Clear formatting"><span style="font-size:13px">T<sub>x</sub></span></button>
+    <span class="sep"></span>
+    <button class="fmt" data-cmd="justifyLeft" title="Align left"><span data-icon="alignL" data-size="16"></span></button>
+    <button class="fmt" data-cmd="justifyCenter" title="Align center"><span data-icon="alignC" data-size="16"></span></button>
+    <button class="fmt" data-cmd="justifyRight" title="Align right"><span data-icon="alignR" data-size="16"></span></button>
+    <button class="fmt" data-cmd="insertUnorderedList" title="Bullet list"><span data-icon="list" data-size="16"></span></button>
+  </section>
+
+  <section class="ribbon no-focus-steal">
+    <div class="ribbon-tabs">
+      <button class="tab active" data-tab="structures">Structures</button>
+      <button class="tab" data-tab="symbols">Symbols</button>
+    </div>
+    <div id="tabStructures"><div class="ribbon-scroll" id="structuresRow"></div></div>
+    <div id="tabSymbols" class="hidden">
+      <div class="sym-toolbar" id="symChips"></div>
+      <div class="sym-toolbar" style="padding-top:0"><input class="sym-search" id="symSearch" placeholder="Search symbols (e.g. alpha, leq)"></div>
+      <div class="sym-grid" id="symGrid"></div>
+    </div>
+  </section>
+
+  <main class="doc-wrap is-empty" id="docWrap">
+    <div id="documentArea" contenteditable="true" spellcheck="false"><p><br></p></div>
+    <div class="doc-hint">Start typing here…  Press <b>Ctrl+E</b> to insert an equation.</div>
+  </main>
+
+  <footer class="status-bar">
+    <div id="stats"></div>
+    <div class="zoom no-focus-steal">
+      <button id="zoomOut" title="Zoom out (Ctrl+-)">−</button><span id="zoomLabel">100%</span><button id="zoomIn" title="Zoom in (Ctrl+=)">+</button>
+    </div>
+  </footer>
+</div>
+
+<div id="toastNotification"></div>
+
+<div id="helpModal">
+  <div class="modal-card">
+    <h3>Keyboard shortcuts</h3>
+    <div class="kb-row"><span>Insert equation</span><kbd>Ctrl + E</kbd></div>
+    <div class="kb-row"><span>Next step (Step N:)</span><kbd>Alt + N</kbd></div>
+    <div class="kb-row"><span>Exit equation (cursor goes to text)</span><kbd>Ctrl + Enter</kbd></div>
+    <div class="kb-row"><span>Copy document as image</span><kbd>Ctrl + Shift + C</kbd></div>
+    <div class="kb-row"><span>Copy equations as LaTeX</span><kbd>Ctrl + Shift + L</kbd></div>
+    <div class="kb-row"><span>Undo / Redo</span><kbd>Ctrl + Z</kbd> <kbd>Ctrl + Y</kbd></div>
+    <div class="kb-row"><span>Zoom in / out / reset</span><kbd>Ctrl + =</kbd> <kbd>Ctrl + -</kbd> <kbd>Ctrl + 0</kbd></div>
+    <div class="kb-row"><span>Close menus</span><kbd>Esc</kbd></div>
+    <p style="color:var(--muted);font-size:12.5px;margin:14px 0 0">Tip: click an equation to edit it. In an equation, Space moves the cursor out of a fraction or root.</p>
+  </div>
+</div>
+
+<script>
+if (window.mathVirtualKeyboard) window.mathVirtualKeyboard.container = null;
+
+/* ---------- helpers ---------- */
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const store = {
+  get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
+  set(k,v){ try { localStorage.setItem(k,v); } catch(e){} }
+};
+const ICONS = {
+  undo:'<path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/>',
+  redo:'<path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 15-6.7L21 13"/>',
+  pin:'<line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-2l-2-2V6h1V4H6v2h1v7l-2 2z"/>',
+  moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  help:'<circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12" y2="17.01"/>',
+  image:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  code:'<path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/>',
+  trash:'<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>',
+  x:'<path d="M18 6L6 18M6 6l12 12"/>',
+  step:'<path d="M5 12h14M13 6l6 6-6 6"/>',
+  list:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+  alignL:'<path d="M3 6h18M3 12h12M3 18h18"/>',
+  alignC:'<path d="M3 6h18M7 12h10M3 18h18"/>',
+  alignR:'<path d="M3 6h18M9 12h12M3 18h18"/>'
+};
+function icon(n, s = 18){
+  return `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n]||''}</svg>`;
+}
+$$('[data-icon]').forEach(el => el.innerHTML = icon(el.dataset.icon, +el.dataset.size || 18));
+
+/* ---------- state ---------- */
+const doc = $('#documentArea');
+let activeField = null;
+let savedRange = null;
+
+/* ---------- toast ---------- */
+function showToast(message, type){
+  type = type || (/^error/i.test(message) ? 'error' : 'success');
+  const t = $('#toastNotification');
+  const ic = { success:'✓', warn:'!', error:'✕' }[type];
+  t.className = '';
+  t.dataset.type = type;
+  t.innerHTML = `<span class="toast-icon">${ic}</span><span></span>`;
+  t.lastChild.textContent = message;
+  void t.offsetWidth;
+  t.classList.add('show');
+  clearTimeout(t._h);
+  t._h = setTimeout(() => t.classList.remove('show'), 2200);
+}
+window.showToast = showToast;
+
+/* ---------- never steal focus from the document when using toolbars ---------- */
+document.addEventListener('mousedown', e => {
+  if (e.target.closest('input,textarea,select')) return;
+  if (e.target.closest('.no-focus-steal')) e.preventDefault();
+});
+
+/* ---------- save / restore ---------- */
+function serialize(){
+  $$('math-field', doc).forEach(m => { try { m.setAttribute('value', m.getValue('latex')); } catch(e){} });
+  return doc.innerHTML.replace(/\s?is-focused/g, '');
+}
+function restoreDoc(html){
+  doc.innerHTML = (html && html.trim()) ? html : '<p><br></p>';
+  $$('.equation-delete-btn', doc).forEach(e => e.remove());
+  $$('math-field', doc).forEach(mf => {
+    const v = mf.getAttribute('value');
+    setupMathField(mf);
+    if (v != null) mf.value = v;
+  });
+}
+function setSave(state){
+  $('#saveChip').classList.toggle('saving', state === 'saving');
+  $('#saveText').textContent = state === 'saving' ? 'Saving…' : 'Saved';
+}
+let saveTimer;
+function scheduleSave(){ setSave('saving'); clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 700); }
+function saveNow(){ store.set('savedDocument', serialize()); setSave('saved'); }
+window.addEventListener('beforeunload', saveNow);
+
+/* ---------- stats and hint ---------- */
+function isEmpty(){ return !doc.querySelector('math-field') && !(doc.innerText || '').replace(/\u00A0/g, ' ').trim(); }
+function updateStats(){
+  const eq = $$('math-field', doc).length;
+  const words = (doc.innerText || '').replace(/\u00A0/g, ' ').trim().split(/\s+/).filter(Boolean).length;
+  $('#stats').innerHTML = `<b>${eq}</b> equation${eq === 1 ? '' : 's'} · <b>${words}</b> word${words === 1 ? '' : 's'}`;
+  $('#docWrap').classList.toggle('is-empty', isEmpty());
+}
+
+/* ---------- undo / redo (document level) ---------- */
+let hStack = [], hIdx = -1, restoring = false, hTimer;
+function pushHistory(){
+  if (restoring) return;
+  const s = serialize();
+  if (hStack[hIdx] === s) return;
+  hStack = hStack.slice(0, hIdx + 1);
+  hStack.push(s);
+  hIdx = hStack.length - 1;
+  if (hStack.length > 100){ hStack.shift(); hIdx--; }
+  updateHistoryButtons();
+}
+function scheduleHistory(){ clearTimeout(hTimer); hTimer = setTimeout(pushHistory, 400); }
+function applySnapshot(s){ restoring = true; restoreDoc(s); restoring = false; afterChange(false); updateHistoryButtons(); }
+function undo(){ clearTimeout(hTimer); pushHistory(); if (hIdx > 0){ hIdx--; applySnapshot(hStack[hIdx]); } }
+function redo(){ if (hIdx < hStack.length - 1){ hIdx++; applySnapshot(hStack[hIdx]); } }
+function updateHistoryButtons(){ $('#undoBtn').disabled = hIdx <= 0; $('#redoBtn').disabled = hIdx >= hStack.length - 1; }
+function afterChange(snapshot = true){ updateStats(); scheduleSave(); if (snapshot) scheduleHistory(); }
+doc.addEventListener('input', () => afterChange(true));
+
+/* ---------- equations ---------- */
+function setupMathField(mf){
+  mf.setAttribute('math-virtual-keyboard-policy', 'manual');
+  mf.addEventListener('focusin', () => { activeField = mf; mf.classList.add('is-focused'); });
+  mf.addEventListener('focusout', () => {
+    setTimeout(() => {
+      if (document.activeElement === mf) return;
+      mf.classList.remove('is-focused');
+      try {
+        if (doc.contains(mf) && !mf.getValue('latex').trim()){ mf.remove(); afterChange(true); }
+      } catch(e){}
+    }, 200);
+  });
+}
+function placeAtCursor(node){
+  const ae = document.activeElement;
+  const sel = getSelection();
+  let range;
+  if (ae && ae.tagName === 'MATH-FIELD' && doc.contains(ae)){
+    range = document.createRange(); range.setStartAfter(ae); range.collapse(true);
+  } else if (savedRange && doc.contains(savedRange.startContainer)){
+    range = savedRange.cloneRange();
+  } else {
+    range = document.createRange(); range.selectNodeContents(doc); range.collapse(false);
+  }
+  doc.focus();
+  range.deleteContents();
+  range.insertNode(node);
+  const space = document.createTextNode('\u00A0');
+  node.after(space);
+  range.setStartAfter(space); range.collapse(true);
+  sel.removeAllRanges(); sel.addRange(range);
+}
+function createEquation(latex){
+  const mf = document.createElement('math-field');
+  setupMathField(mf);
+  placeAtCursor(mf);
+  setTimeout(() => { mf.focus(); if (latex) mf.insert(latex); afterChange(true); }, 60);
+  return mf;
+}
+function insertLatex(latex){
+  const ae = document.activeElement;
+  const keep = activeField && doc.contains(activeField) &&
+               (ae === activeField || (ae && ae.closest && ae.closest('.ribbon')));
+  if (keep){ activeField.insert(latex); activeField.focus(); afterChange(true); }
+  else createEquation(latex);
+}
+function deleteActiveEquation(){
+  if (activeField && doc.contains(activeField)){
+    activeField.remove(); activeField = null; afterChange(true); showToast('Equation deleted');
+  } else showToast('Click an equation first', 'warn');
+}
+function exitEquation(){
+  if (!activeField || !doc.contains(activeField)) return;
+  const mf = activeField, next = mf.nextSibling, r = document.createRange();
+  mf.blur(); doc.focus();
+  if (next && next.nodeType === 3) r.setStart(next, Math.min(1, next.length)); else r.setStartAfter(mf);
+  r.collapse(true);
+  const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+}
+
+/* Backspace right after an equation deletes the whole equation */
+doc.addEventListener('keydown', e => {
+  if (e.key !== 'Backspace') return;
+  const sel = getSelection();
+  if (!sel.rangeCount || !sel.isCollapsed) return;
+  const r = sel.getRangeAt(0), c = r.startContainer, o = r.startOffset;
+  let prev = null;
+  if (c.nodeType === 3){ if (o === 0) prev = c.previousSibling; else if (o === 1 && c.textContent[0] === '\u00A0' && c.previousSibling && c.previousSibling.tagName === 'MATH-FIELD'){ prev = c.previousSibling; } }
+  else if (o > 0) prev = c.childNodes[o - 1];
+  if (prev && prev.nodeType === 3 && prev.textContent === '\u00A0' && prev.previousSibling && prev.previousSibling.tagName === 'MATH-FIELD'){
+    e.preventDefault(); prev.previousSibling.remove(); prev.remove(); afterChange(true); return;
+  }
+  if (prev && prev.tagName === 'MATH-FIELD'){
+    e.preventDefault();
+    const sib = c.nodeType === 3 && o === 1 ? c : null;
+    prev.remove(); if (sib && sib.textContent === '\u00A0') sib.remove();
+    afterChange(true);
+  }
+});
+
+/* Paste as plain text */
+doc.addEventListener('paste', e => {
+  if (e.target.tagName === 'MATH-FIELD') return;
+  e.preventDefault();
+  const t = (e.clipboardData || window.clipboardData).getData('text/plain');
+  document.execCommand('insertText', false, t);
+});
+
+/* ---------- text formatting ---------- */
+document.execCommand('defaultParagraphSeparator', false, 'p');
+document.execCommand('styleWithCSS', false, true);
+document.addEventListener('selectionchange', () => {
+  const s = getSelection();
+  if (s.rangeCount && doc.contains(s.anchorNode)){ savedRange = s.getRangeAt(0).cloneRange(); updateFormatState(); }
+});
+function fmt(cmd, val){
+  const ae = document.activeElement;
+  if (!(ae === doc || doc.contains(ae))) doc.focus();
+  document.execCommand(cmd, false, val);
+  afterChange(true); updateFormatState();
+}
+function updateFormatState(){
+  $$('[data-cmd]').forEach(b => { let on = false; try { on = document.queryCommandState(b.dataset.cmd); } catch(e){} b.classList.toggle('active', on); });
+}
+$$('[data-cmd]').forEach(b => b.addEventListener('click', () => fmt(b.dataset.cmd)));
+$('#clearFmtBtn').addEventListener('click', () => fmt('removeFormat'));
+[['Red','#e5484d'],['Blue','#3b82f6'],['Green','#22a559'],['Orange','#f08c1a'],['Purple','#8b5cf6']].forEach(([n, c]) => {
+  const b = document.createElement('button');
+  b.className = 'swatch'; b.title = n + ' text'; b.style.background = c;
+  b.addEventListener('click', () => fmt('foreColor', c));
+  $('#swatches').appendChild(b);
+});
+$('#undoBtn').addEventListener('click', undo);
+$('#redoBtn').addEventListener('click', redo);
+
+/* ---------- dropdown engine ---------- */
+function closeAllDropdowns(){
+  $$('.dropdown-panel.open').forEach(p => p.classList.remove('open'));
+  $$('.is-active').forEach(b => { if (b.classList.contains('rbtn') || b.classList.contains('btn')) b.classList.remove('is-active'); });
+}
+document.addEventListener('click', closeAllDropdowns);
+function positionAndOpen(panel, btn){
+  const wasOpen = panel.classList.contains('open');
+  closeAllDropdowns();
+  if (wasOpen) return;
+  if (panel.parentElement !== document.body) document.body.appendChild(panel);
+  const m = 8, vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
+  panel.style.maxWidth = Math.max(160, vw - m * 2) + 'px';
+  panel.style.maxHeight = Math.max(120, vh - m * 2) + 'px';
+  panel.style.left = '0px'; panel.style.top = '0px';
+  panel.classList.add('open'); btn.classList.add('is-active');
+  const b = btn.getBoundingClientRect(), p = panel.getBoundingClientRect();
+  let left = Math.min(Math.max(b.left, m), vw - p.width - m);
+  if (left < m) left = m;
+  let top = b.bottom + 6;
+  if (top + p.height > vh - m) top = Math.max(m, b.top - p.height - 6);
+  panel.style.left = left + 'px'; panel.style.top = top + 'px';
+}
+function bindPanel(btn, panel){
+  document.body.appendChild(panel);
+  btn.addEventListener('click', e => { e.stopPropagation(); positionAndOpen(panel, btn); });
+}
+function buildGridPanel(sections, cw){
+  const panel = document.createElement('div');
+  panel.className = 'dropdown-panel no-focus-steal';
+  sections.forEach(sec => {
+    const t = document.createElement('div'); t.className = 'panel-title'; t.textContent = sec.title; panel.appendChild(t);
+    const g = document.createElement('div'); g.className = 'panel-grid';
+    g.style.gridTemplateColumns = `repeat(${sec.cols || 4}, ${cw}px)`;
+    sec.items.forEach(([latex, preview]) => {
+      const it = document.createElement('div'); it.className = 'dd-item';
+      const pm = document.createElement('math-field');
+      pm.setAttribute('read-only', 'true'); pm.setAttribute('math-virtual-keyboard-policy', 'manual');
+      pm.value = preview; it.appendChild(pm);
+      it.addEventListener('click', () => { insertLatex(latex); closeAllDropdowns(); });
+      g.appendChild(it);
+    });
+    panel.appendChild(g);
+  });
+  return panel;
+}
+function ribbonDropdown(def){
+  const btn = document.createElement('button');
+  btn.className = 'rbtn';
+  btn.innerHTML = `<span class="ri">${def.icon}</span><span class="rl">${def.label}</span>`;
+  bindPanel(btn, buildGridPanel(def.sections, def.cw || 72));
+  return btn;
+}
+function ribbonGroup(name, items){
+  const g = document.createElement('div'); g.className = 'rgroup';
+  const row = document.createElement('div'); row.className = 'rgroup-items';
+  items.forEach(i => row.appendChild(ribbonDropdown(i)));
+  const l = document.createElement('div'); l.className = 'rgroup-label'; l.textContent = name;
+  g.appendChild(row); g.appendChild(l);
+  return g;
+}
+
+/* ---------- structures ---------- */
+const S = (title, cols, items) => ({ title, cols, items });
+const GROUPS = [
+ { name:'Structures', items:[
+  { label:'Fraction', icon:'<span class="ico-text">x⁄y</span>', cw:78, sections:[
+    S('Fraction',4,[["\\frac{#@}{#?}","\\frac{\\Box}{\\Box}"],["#@/#?","\\Box/\\Box"],["\\dfrac{#@}{#?}","\\dfrac{\\Box}{\\Box}"],["\\cfrac{#@}{#?}","\\cfrac{1}{2}"]]),
+    S('Common Fraction',4,[["\\dfrac{d#@}{d#?}","\\dfrac{dy}{dx}"],["\\dfrac{\\Delta #@}{\\Delta #?}","\\dfrac{\\Delta y}{\\Delta x}"],["\\dfrac{\\partial #@}{\\partial #?}","\\dfrac{\\partial y}{\\partial x}"],["\\dfrac{\\delta #@}{\\delta #?}","\\dfrac{\\delta y}{\\delta x}"],["\\dfrac{\\pi}{2}","\\dfrac{\\pi}{2}"]])]},
+  { label:'Script', icon:'e<sup style="font-size:11px">x</sup>', cw:72, sections:[
+    S('Script',4,[["#@^{#?}","x^{2}"],["#@_{#?}","x_{2}"],["#@_{#?}^{#?}","x_{2}^{3}"],["{}^{#?}_{#?}#@","{}^{2}_{1}x"]])]},
+  { label:'Radical', icon:'√x', cw:78, sections:[
+    S('Radicals',4,[["\\sqrt{#@}","\\sqrt{\\Box}"],["\\sqrt[#?]{#@}","\\sqrt[n]{\\Box}"],["\\sqrt[2]{#@}","\\sqrt[2]{\\Box}"],["\\sqrt[3]{#@}","\\sqrt[3]{\\Box}"]]),
+    S('Common Radicals',2,[["\\dfrac{-b\\pm\\sqrt{b^{2}-4ac}}{2a}","\\dfrac{-b\\pm\\sqrt{b^{2}-4ac}}{2a}"],["\\sqrt{a^{2}+b^{2}}","\\sqrt{a^{2}+b^{2}}"]])]},
+  { label:'Integral', icon:'∫', cw:84, sections:[
+    S('Integrals',4,[["\\int #?\\,d#?","\\int f\\,dx"],["\\int_{#?}^{#?}#?\\,d#?","\\int_{a}^{b}f\\,dx"],["\\iint #?\\,d#?","\\iint f\\,dA"],["\\iiint #?\\,d#?","\\iiint f\\,dV"],["\\oint #?\\,d#?","\\oint f\\,dx"]])]},
+  { label:'Large Operator', icon:'Σ', cw:84, sections:[
+    S('Large Operators',4,[["\\sum_{#?}^{#?}#?","\\sum_{i=0}^{n}"],["\\prod_{#?}^{#?}#?","\\prod_{i=0}^{n}"],["\\bigcup_{#?}^{#?}#?","\\bigcup_{i}^{n}"],["\\bigcap_{#?}^{#?}#?","\\bigcap_{i}^{n}"]])]},
+  { label:'Bracket', icon:'{( )}', cw:72, sections:[
+    S('Brackets',4,[["(#@)","(x)"],["[#@]","[x]"],["\\{#@\\}","\\{x\\}"],["|#@|","|x|"],["\\langle #@\\rangle","\\langle x\\rangle"],["\\lceil #@\\rceil","\\lceil x\\rceil"],["\\lfloor #@\\rfloor","\\lfloor x\\rfloor"],["\\left(#@\\right)","\\left(\\dfrac{a}{b}\\right)"]])]},
+  { label:'Function', icon:'sinθ', cw:84, sections:[
+    S('Functions',4,[["\\sin(#?)","\\sin(x)"],["\\cos(#?)","\\cos(x)"],["\\tan(#?)","\\tan(x)"],["\\csc(#?)","\\csc(x)"],["\\sec(#?)","\\sec(x)"],["\\cot(#?)","\\cot(x)"],["\\sin^{-1}(#?)","\\sin^{-1}(x)"],["\\log(#?)","\\log(x)"],["\\log_{#?}(#?)","\\log_{n}(x)"],["\\ln(#?)","\\ln(x)"],["\\exp(#?)","\\exp(x)"],["\\lim_{#?}","\\lim_{x \\to 0}"]])]},
+  { label:'Accent', icon:'ä', cw:72, sections:[
+    S('Accents',4,[["\\bar{#@}","\\bar{x}"],["\\vec{#@}","\\vec{x}"],["\\hat{#@}","\\hat{x}"],["\\dot{#@}","\\dot{x}"],["\\ddot{#@}","\\ddot{x}"],["\\tilde{#@}","\\tilde{x}"],["\\overline{#@}","\\overline{xyz}"],["\\underline{#@}","\\underline{xyz}"]])]},
+  { label:'Limit and Log', icon:'<span style="font-size:11px;line-height:1.1;text-align:center">lim<br>n→∞</span>', cw:90, sections:[
+    S('Limits and Logs',4,[["\\lim_{#? \\to #?}","\\lim_{x \\to 0}"],["\\lim_{#? \\to \\infty}","\\lim_{x \\to \\infty}"],["\\log_{#?}(#?)","\\log_{n}(x)"],["\\ln(#?)","\\ln(x)"],["\\log(#?)","\\log(x)"],["\\max_{#?}","\\max_{x}"],["\\min_{#?}","\\min_{x}"]])]},
+  { label:'Matrix', icon:'<span style="font-size:12px;line-height:1.1;text-align:center">[1 0<br>0 1]</span>', cw:110, sections:[
+    S('Matrices',2,[["\\begin{pmatrix}#?&#?\\\\#?&#?\\end{pmatrix}","\\begin{pmatrix}a&b\\\\c&d\\end{pmatrix}"],["\\begin{bmatrix}#?&#?\\\\#?&#?\\end{bmatrix}","\\begin{bmatrix}a&b\\\\c&d\\end{bmatrix}"],["\\begin{vmatrix}#?&#?\\\\#?&#?\\end{vmatrix}","\\begin{vmatrix}a&b\\\\c&d\\end{vmatrix}"],["\\begin{pmatrix}#?&#?&#?\\\\#?&#?&#?\\\\#?&#?&#?\\end{pmatrix}","\\begin{pmatrix}a&b&c\\\\d&e&f\\\\g&h&i\\end{pmatrix}"]])]}
+ ]},
+ { name:'Layout', items:[
+  { label:'Cases', icon:'<span style="font-size:22px">{</span>', cw:110, sections:[
+    S('Piecewise / Systems',2,[["\\begin{cases}#?&#?\\\\#?&#?\\end{cases}","\\begin{cases}a&b\\\\c&d\\end{cases}"],["\\begin{cases}#?&#?\\\\#?&#?\\\\#?&#?\\end{cases}","\\begin{cases}a&b\\\\c&d\\\\e&f\\end{cases}"]])]},
+  { label:'Aligned', icon:'<span style="font-size:15px;line-height:1.1;text-align:left">a=b<br>&nbsp;=c</span>', cw:110, sections:[
+    S('Step-by-step lines',2,[["\\begin{aligned}#?&=#?\\\\&=#?\\end{aligned}","\\begin{aligned}a&=b\\\\&=c\\end{aligned}"],["\\begin{aligned}#?&=#?\\\\&=#?\\\\&=#?\\end{aligned}","\\begin{aligned}a&=b\\\\&=c\\\\&=d\\end{aligned}"]])]},
+  { label:'Binomial', icon:'(ⁿₖ)', cw:90, sections:[
+    S('Binomial',2,[["\\binom{#@}{#?}","\\binom{n}{k}"],["\\dbinom{#@}{#?}","\\dbinom{n}{k}"]])]}
+ ]},
+ { name:'Formulas', items:[
+  { label:'Formulas', icon:'<span class="ico-text">f(x)</span>', cw:170, sections:[
+    S('Algebra and Geometry',2,[
+      ["x=\\dfrac{-b\\pm\\sqrt{b^{2}-4ac}}{2a}","x=\\dfrac{-b\\pm\\sqrt{b^{2}-4ac}}{2a}"],
+      ["a^{2}+b^{2}=c^{2}","a^{2}+b^{2}=c^{2}"],
+      ["m=\\dfrac{y_{2}-y_{1}}{x_{2}-x_{1}}","m=\\dfrac{y_{2}-y_{1}}{x_{2}-x_{1}}"],
+      ["d=\\sqrt{(x_{2}-x_{1})^{2}+(y_{2}-y_{1})^{2}}","d=\\sqrt{(x_{2}-x_{1})^{2}+(y_{2}-y_{1})^{2}}"],
+      ["A=\\pi r^{2}","A=\\pi r^{2}"],
+      ["|x|=\\begin{cases}x&x\\ge 0\\\\-x&x<0\\end{cases}","|x|=\\begin{cases}x&x\\ge 0\\\\-x&x<0\\end{cases}"]]),
+    S('Calculus and Others',2,[
+      ["f'(x)=\\lim_{h\\to 0}\\dfrac{f(x+h)-f(x)}{h}","f'(x)=\\lim_{h\\to 0}\\dfrac{f(x+h)-f(x)}{h}"],
+      ["\\sin^{2}\\theta+\\cos^{2}\\theta=1","\\sin^{2}\\theta+\\cos^{2}\\theta=1"],
+      ["A=P\\left(1+\\dfrac{r}{n}\\right)^{nt}","A=P\\left(1+\\dfrac{r}{n}\\right)^{nt}"],
+      ["e^{i\\pi}+1=0","e^{i\\pi}+1=0"]])]}
+ ]}
+];
+GROUPS.forEach(g => $('#structuresRow').appendChild(ribbonGroup(g.name, g.items)));
+
+/* ---------- symbols tab ---------- */
+const SYM = {
+ Basic:[["±","\\pm"],["∓","\\mp"],["×","\\times"],["÷","\\div"],["⋅","\\cdot"],["=","="],["≠","\\ne"],["≈","\\approx"],["≡","\\equiv"],["∼","\\sim"],["≅","\\cong"],["∝","\\propto"],["<","<"],[">",">"],["≤","\\le"],["≥","\\ge"],["≪","\\ll"],["≫","\\gg"],["∞","\\infty"],["!","!"],["%","\\%"],["°","^\\circ"],["∂","\\partial"],["∇","\\nabla"],["Δ","\\Delta"],["√","\\sqrt{#?}"],["∛","\\sqrt[3]{#?}"],["∑","\\sum"],["∏","\\prod"],["∫","\\int"]],
+ Greek:[["α","\\alpha"],["β","\\beta"],["γ","\\gamma"],["δ","\\delta"],["ε","\\varepsilon"],["ϵ","\\epsilon"],["ζ","\\zeta"],["η","\\eta"],["θ","\\theta"],["ϑ","\\vartheta"],["ι","\\iota"],["κ","\\kappa"],["λ","\\lambda"],["μ","\\mu"],["ν","\\nu"],["ξ","\\xi"],["π","\\pi"],["ρ","\\rho"],["σ","\\sigma"],["τ","\\tau"],["υ","\\upsilon"],["φ","\\varphi"],["ϕ","\\phi"],["χ","\\chi"],["ψ","\\psi"],["ω","\\omega"],["Γ","\\Gamma"],["Δ","\\Delta"],["Θ","\\Theta"],["Λ","\\Lambda"],["Ξ","\\Xi"],["Π","\\Pi"],["Σ","\\Sigma"],["Υ","\\Upsilon"],["Φ","\\Phi"],["Ψ","\\Psi"],["Ω","\\Omega"]],
+ Arrows:[["←","\\leftarrow"],["→","\\rightarrow"],["↑","\\uparrow"],["↓","\\downarrow"],["↔","\\leftrightarrow"],["↕","\\updownarrow"],["⇐","\\Leftarrow"],["⇒","\\Rightarrow"],["⇑","\\Uparrow"],["⇓","\\Downarrow"],["⇔","\\Leftrightarrow"],["↦","\\mapsto"],["↩","\\hookleftarrow"],["↪","\\hookrightarrow"],["⇌","\\rightleftharpoons"],["↗","\\nearrow"],["↘","\\searrow"]],
+ "Sets & Logic":[["∈","\\in"],["∉","\\notin"],["∋","\\ni"],["⊂","\\subset"],["⊆","\\subseteq"],["⊃","\\supset"],["⊇","\\supseteq"],["∪","\\cup"],["∩","\\cap"],["∅","\\emptyset"],["∧","\\land"],["∨","\\lor"],["¬","\\neg"],["∀","\\forall"],["∃","\\exists"],["∄","\\nexists"],["∴","\\therefore"],["∵","\\because"],["⊢","\\vdash"],["⊨","\\models"]],
+ Letterlike:[["ℵ","\\aleph"],["ℏ","\\hbar"],["ℓ","\\ell"],["℘","\\wp"],["ℜ","\\Re"],["ℑ","\\Im"],["ℕ","\\mathbb{N}"],["ℤ","\\mathbb{Z}"],["ℚ","\\mathbb{Q}"],["ℝ","\\mathbb{R}"],["ℂ","\\mathbb{C}"],["∞","\\infty"],["∅","\\emptyset"]],
+ Operators:[["+","+"],["−","-"],["×","\\times"],["÷","\\div"],["⋅","\\cdot"],["∗","\\ast"],["⊕","\\oplus"],["⊗","\\otimes"],["⊖","\\ominus"],["∘","\\circ"],["∙","\\bullet"],["∐","\\coprod"],["⋂","\\bigcap"],["⋃","\\bigcup"],["∮","\\oint"],["∬","\\iint"],["∭","\\iiint"]],
+ Geometry:[["∠","\\angle"],["∡","\\measuredangle"],["⊥","\\perp"],["∥","\\parallel"],["△","\\triangle"],["□","\\square"],["◊","\\diamond"],["○","\\bigcirc"],["≅","\\cong"],["∼","\\sim"],["°","^\\circ"]],
+ Negated:[["≠","\\ne"],["∉","\\notin"],["⊄","\\not\\subset"],["⊅","\\not\\supset"],["⊈","\\nsubseteq"],["⊉","\\nsupseteq"],["≁","\\nsim"],["≇","\\ncong"],["≉","\\not\\approx"],["≢","\\not\\equiv"],["⊀","\\nprec"],["⊁","\\nsucc"],["∤","\\nmid"],["∦","\\nparallel"]]
+};
+let recent = [];
+try { recent = JSON.parse(store.get('recentSymbols') || '[]'); } catch(e){ recent = []; }
+let symCat = 'Basic';
+function addRecent(s){
+  recent = [s, ...recent.filter(r => r[1] !== s[1])].slice(0, 24);
+  store.set('recentSymbols', JSON.stringify(recent));
+}
+function renderSymbolChips(){
+  const box = $('#symChips'); box.innerHTML = '';
+  ['Recent', ...Object.keys(SYM)].forEach(name => {
+    const b = document.createElement('button');
+    b.className = 'chip-btn' + (name === symCat ? ' active' : '');
+    b.textContent = name;
+    b.addEventListener('click', () => { symCat = name; $('#symSearch').value = ''; renderSymbolChips(); renderSymbolGrid(); });
+    box.appendChild(b);
+  });
+}
+function renderSymbolGrid(){
+  const q = $('#symSearch').value.trim().toLowerCase().replace(/^\\/, '');
+  let list;
+  if (q){
+    const seen = new Set(); list = [];
+    Object.values(SYM).flat().forEach(s => {
+      if (seen.has(s[1])) return;
+      if (s[0] === q || s[1].toLowerCase().includes(q)){ seen.add(s[1]); list.push(s); }
+    });
+  } else list = symCat === 'Recent' ? recent : SYM[symCat];
+  const g = $('#symGrid'); g.innerHTML = '';
+  if (!list.length){
+    g.innerHTML = `<div class="sym-empty">${q ? 'No symbols found.' : 'Symbols you use will appear here.'}</div>`; return;
+  }
+  list.forEach(s => {
+    const b = document.createElement('button');
+    b.className = 'sym'; b.textContent = s[0]; b.title = s[1];
+    b.addEventListener('click', () => { insertLatex(s[1]); addRecent(s); if (symCat === 'Recent') renderSymbolGrid(); });
+    g.appendChild(b);
+  });
+}
+$('#symSearch').addEventListener('input', renderSymbolGrid);
+renderSymbolChips(); renderSymbolGrid();
+
+$$('.tab').forEach(t => t.addEventListener('click', () => {
+  $$('.tab').forEach(x => x.classList.toggle('active', x === t));
+  $('#tabStructures').classList.toggle('hidden', t.dataset.tab !== 'structures');
+  $('#tabSymbols').classList.toggle('hidden', t.dataset.tab !== 'symbols');
+  closeAllDropdowns();
+}));
+
+/* ---------- snippets and steps ---------- */
+function ensureCaret(){
+  const s = getSelection();
+  if (!(s.rangeCount && doc.contains(s.anchorNode))){
+    doc.focus();
+    const r = document.createRange(); r.selectNodeContents(doc); r.collapse(false);
+    s.removeAllRanges(); s.addRange(r);
+  }
+}
+function insertHTMLAtCaret(html){ ensureCaret(); document.execCommand('insertHTML', false, html); afterChange(true); }
+function nextStep(){
+  const n = ((doc.innerText || '').match(/\bStep\s+\d+/gi) || []).length + 1;
+  insertHTMLAtCaret(`<p><b>Step ${n}:</b>&nbsp;</p>`);
+}
+const SNIPPETS = [
+  ['Given:', '<p><b>Given:</b>&nbsp;</p>', ''],
+  ['Solution:', '<p><b>Solution:</b></p>', ''],
+  ['Therefore,', '<p>Therefore,&nbsp;</p>', ''],
+  ['Hence proved', '<p><b>Hence proved.</b></p>', ''],
+  ['Answer:', '<p><b>Answer:</b>&nbsp;</p>', ''],
+  ['Note:', '<p><i>Note:</i>&nbsp;</p>', ''],
+  ['Full solution template', '<p><b>Given:</b>&nbsp;</p><p><b>Solution:</b></p><p><b>Step 1:</b>&nbsp;</p><p><b>Step 2:</b>&nbsp;</p><p><b>Answer:</b>&nbsp;</p>', 'template']
+];
+(function buildSnippets(){
+  const panel = document.createElement('div');
+  panel.className = 'dropdown-panel no-focus-steal';
+  panel.style.minWidth = '230px'; panel.style.padding = '8px';
+  SNIPPETS.forEach(([label, html, tag]) => {
+    const it = document.createElement('div'); it.className = 'menu-item';
+    it.innerHTML = `<span></span><small>${tag}</small>`; it.firstChild.textContent = label;
+    it.addEventListener('click', () => { closeAllDropdowns(); insertHTMLAtCaret(html); });
+    panel.appendChild(it);
+  });
+  bindPanel($('#snippetsBtn'), panel);
+})();
+
+/* ---------- actions ---------- */
+function copyText(text){
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+  document.body.appendChild(ta); ta.select();
+  let ok = false; try { ok = document.execCommand('copy'); } catch(e){}
+  ta.remove(); return ok;
+}
+function copyLatex(){
+  const parts = $$('math-field', doc).map(m => m.getValue('latex')).filter(Boolean);
+  if (!parts.length) return showToast('No equations to copy', 'warn');
+  if (copyText(parts.join('\n'))) showToast(`${parts.length} equation${parts.length > 1 ? 's' : ''} copied as LaTeX`);
+  else showToast('Error: could not copy LaTeX');
+}
+function clearDoc(){
+  if (isEmpty()) return showToast('Document is already empty', 'warn');
+  clearTimeout(hTimer); pushHistory();
+  doc.innerHTML = '<p><br></p>';
+  afterChange(true); pushHistory();
+  showToast('Cleared. Press Ctrl+Z to undo', 'warn');
+}
+function takeScreenshot(){
+  if (isEmpty()) return showToast('Nothing to copy yet', 'warn');
+  window.pyScreenshotTrigger = true;
+}
+$('#insertEquationBtn').addEventListener('click', () => createEquation(''));
+$('#nextStepBtn').addEventListener('click', nextStep);
+$('#copyLatexBtn').addEventListener('click', copyLatex);
+$('#delEqBtn').addEventListener('click', deleteActiveEquation);
+$('#clearBtn').addEventListener('click', clearDoc);
+$('#screenshotBtn').addEventListener('click', takeScreenshot);
+
+/* Called by Python when it captures the document */
+window.prepareForCapture = function(){
+  closeAllDropdowns();
+  document.body.classList.add('capturing');
+  $$('math-field', doc).forEach(m => m.classList.remove('is-focused'));
+  if (document.activeElement) document.activeElement.blur();
+  getSelection().removeAllRanges();
+  window.scrollTo(0, 0);
+};
+window.restoreAfterCapture = function(){ document.body.classList.remove('capturing'); };
+
+/* ---------- pin (Python integration, added in the next step) ---------- */
+$('#pinBtn').addEventListener('click', () => { window.pyPinTrigger = true; });
+window.setPinned = function(on){ $('#pinBtn').classList.toggle('active', !!on); };
+
+/* ---------- theme and zoom ---------- */
+function applyTheme(t){
+  document.documentElement.dataset.theme = t;
+  $('#themeBtn').innerHTML = icon(t === 'dark' ? 'sun' : 'moon');
+  store.set('theme', t);
+}
+$('#themeBtn').addEventListener('click', () => applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'));
+let docSize = parseInt(store.get('docSize') || '18', 10);
+function applyZoom(){
+  docSize = Math.max(12, Math.min(34, docSize));
+  document.documentElement.style.setProperty('--doc-size', docSize + 'px');
+  $('#zoomLabel').textContent = Math.round(docSize / 18 * 100) + '%';
+  store.set('docSize', docSize);
+}
+$('#zoomIn').addEventListener('click', () => { docSize += 2; applyZoom(); });
+$('#zoomOut').addEventListener('click', () => { docSize -= 2; applyZoom(); });
+
+/* ---------- help ---------- */
+$('#helpBtn').addEventListener('click', () => $('#helpModal').classList.add('open'));
+$('#helpModal').addEventListener('click', e => { if (e.target.id === 'helpModal') $('#helpModal').classList.remove('open'); });
+
+/* ---------- keyboard shortcuts ---------- */
+document.addEventListener('keydown', e => {
+  const ctrl = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
+  if (e.key === 'Escape'){ closeAllDropdowns(); $('#helpModal').classList.remove('open'); return; }
+  if (ctrl && !e.shiftKey && k === 'e'){ e.preventDefault(); createEquation(''); return; }
+  if (ctrl && e.shiftKey && k === 'c'){ e.preventDefault(); takeScreenshot(); return; }
+  if (ctrl && e.shiftKey && k === 'l'){ e.preventDefault(); copyLatex(); return; }
+  if (e.altKey && k === 'n'){ e.preventDefault(); nextStep(); return; }
+  if (ctrl && e.key === 'Enter'){ e.preventDefault(); exitEquation(); return; }
+  if (ctrl && (e.key === '=' || e.key === '+')){ e.preventDefault(); docSize += 2; applyZoom(); return; }
+  if (ctrl && e.key === '-'){ e.preventDefault(); docSize -= 2; applyZoom(); return; }
+  if (ctrl && e.key === '0'){ e.preventDefault(); docSize = 18; applyZoom(); return; }
+  if (e.target && e.target.tagName === 'MATH-FIELD') return;   // equation keeps its own undo
+  if (ctrl && !e.shiftKey && k === 'z'){ e.preventDefault(); undo(); }
+  else if (ctrl && (k === 'y' || (k === 'z' && e.shiftKey))){ e.preventDefault(); redo(); }
+});
+
+/* ---------- init ---------- */
+applyTheme(store.get('theme') || 'light');
+applyZoom();
+restoreDoc(store.get('savedDocument') || '');
+updateStats(); updateFormatState();
+setTimeout(() => { pushHistory(); }, 500);
+console.log('Equation Studio ready');
+</script>
+</body>
+</html>
