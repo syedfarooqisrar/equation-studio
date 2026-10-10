@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# App runtime data (never commit)
+web_storage/
+
+# Secrets
+.env
+*.env
+
+# Build output (for the .exe step later)
+build/
+dist/
+*.spec
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
