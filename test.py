@@ -1,129 +1,272 @@
-import sys
-import os
+# 📁 FILE: test.py
+# 📌 WHAT: Equation Studio window: pin toggle + full-document capture (scroll & stitch)
 import json
-from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout
-from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
-from PySide6.QtCore import QUrl, QTimer, QBuffer, QIODevice
+import os
+import sys
+from datetime import datetime
+
 import win32clipboard
+from PySide6.QtCore import QBuffer, QIODevice, Qt, QTimer, QUrl
+from PySide6.QtGui import QColor, QImage, QPainter
+from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
+from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtWidgets import QApplication, QFileDialog, QVBoxLayout, QWidget
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+os.chdir(BASE_DIR)
+CAPTURE_DIR = os.path.join(BASE_DIR, "captures")
+
+POLL_INTERVAL_MS = 300
+SCROLL_SETTLE_MS = 180      # wait after scrolling so the page repaints
+MAX_CLIPBOARD_PX = 12000    # taller than this -> split into pages
+PAGE_PX = 5000              # target page height when splitting
+MAX_SLICES = 300            # safety guard against endless loops
 
 
 def copy_qimage_to_clipboard(qimage):
+    """Copy a QImage to the Windows clipboard as a DIB (pastes into Word, Notepad, browsers)."""
+    rgb = qimage.convertToFormat(QImage.Format.Format_RGB32)
     buffer = QBuffer()
     buffer.open(QIODevice.OpenModeFlag.ReadWrite)
-    qimage.save(buffer, "BMP")
-    data = buffer.data().data()[14:]
+    rgb.save(buffer, "BMP")
+    data = bytes(buffer.data())[14:]  # strip the 14-byte BMP file header
     buffer.close()
 
     win32clipboard.OpenClipboard()
-    win32clipboard.EmptyClipboard()
-    win32clipboard.SetClipboardData(win32clipboard.CF_DIB, data)
-    win32clipboard.CloseClipboard()
+    try:
+        win32clipboard.EmptyClipboard()
+        win32clipboard.SetClipboardData(win32clipboard.CF_DIB, data)
+    finally:
+        win32clipboard.CloseClipboard()
 
 
-class MyPage(QWebEnginePage):
-    def __init__(self, profile, parent=None):
-        super().__init__(profile, parent)
+def split_pages(image, breaks_px, max_px):
+    """Split a tall image into pages, cutting only at paragraph boundaries when possible."""
+    pages, start, total = [], 0, image.height()
+    while start < total:
+        limit = start + max_px
+        if limit >= total:
+            end = total
+        else:
+            candidates = [b for b in breaks_px if start + max_px * 0.5 < b <= limit]
+            end = max(candidates) if candidates else limit
+        pages.append(image.copy(0, start, image.width(), end - start))
+        start = end
+    return pages
 
+
+class EditorPage(QWebEnginePage):
     def javaScriptConsoleMessage(self, level, message, lineNumber, sourceID):
+        if "math fonts could not be loaded" in message:  # harmless MathLive warning
+            return
         print(f"JS Console: {message} (line {lineNumber})")
 
-app = QApplication(sys.argv)
 
-window = QWidget()
-window.setWindowTitle("Word Style Equation Editor")
-window.resize(900, 700)
+class EquationStudio(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Equation Studio")
+        self.resize(1000, 800)
 
-from PySide6.QtCore import Qt
-window.setWindowFlags(window.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
+        self.pinned = True
+        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
 
-layout = QVBoxLayout()
-
-storage_path = os.path.abspath("web_storage")
-os.makedirs(storage_path, exist_ok=True)
-
-profile = QWebEngineProfile("EquationEditorProfile")
-profile.setPersistentStoragePath(storage_path)
-profile.setCachePath(os.path.join(storage_path, "cache"))
-profile.setPersistentCookiesPolicy(QWebEngineProfile.PersistentCookiesPolicy.ForcePersistentCookies)
-
-web_view = QWebEngineView()
-page = MyPage(profile, web_view)
-web_view.setPage(page)
-
-html_path = os.path.abspath("word_style_editor.html")
-web_view.load(QUrl.fromLocalFile(html_path))
-
-layout.addWidget(web_view)
-window.setLayout(layout)
-
-
-def handle_screenshot_click():
-    # Prepare the page: remove focus glow/selection so the capture is clean
-    web_view.page().runJavaScript("window.prepareForCapture && window.prepareForCapture();")
-    js_code = "document.getElementById('documentArea').scrollHeight;"
-    QTimer.singleShot(60, lambda: web_view.page().runJavaScript(js_code, prepare_document_capture))
-
-
-def prepare_document_capture(scroll_height):
-    try:
-        # Make sure the whole document area fits in the visible window
-        needed_height = int(scroll_height) + 260
-        needed_height = min(needed_height, 1400)
-        if needed_height > window.height():
-            window.resize(window.width(), needed_height)
-        QTimer.singleShot(250, capture_document)
-    except Exception as e:
-        print(f"Resize error: {e}")
-
-
-def capture_document():
-    js_code = """
-        (function() {
-            const el = document.getElementById('documentArea');
-            const r = el.getBoundingClientRect();
-            return JSON.stringify({x: r.x, y: r.y, width: r.width, height: r.height});
-        })();
-    """
-    web_view.page().runJavaScript(js_code, finalize_capture)
-
-
-def finalize_capture(result):
-    try:
-        rect = json.loads(result)
-        x, y, w, h = int(rect['x']), int(rect['y']), int(rect['width']), int(rect['height'])
-
-        # Account for high-DPI screens (grab() returns device pixels)
-        full_pixmap = web_view.grab()
-        ratio = full_pixmap.devicePixelRatio()
-        padding = 3
-        cropped = full_pixmap.copy(
-            int((x + padding) * ratio),
-            int((y + padding) * ratio),
-            int((w - padding * 2) * ratio),
-            int((h - padding * 2) * ratio),
+        storage_path = os.path.join(BASE_DIR, "web_storage")
+        os.makedirs(storage_path, exist_ok=True)
+        self.profile = QWebEngineProfile("EquationEditorProfile", self)
+        self.profile.setPersistentStoragePath(storage_path)
+        self.profile.setCachePath(os.path.join(storage_path, "cache"))
+        self.profile.setPersistentCookiesPolicy(
+            QWebEngineProfile.PersistentCookiesPolicy.ForcePersistentCookies
         )
 
-        copy_qimage_to_clipboard(cropped.toImage())
-        print("Document screenshot copied to clipboard!")
-        web_view.page().runJavaScript("window.showToast('Copied to clipboard!');")
-    except Exception as e:
-        print(f"Error capturing document: {e}")
-        web_view.page().runJavaScript("window.showToast('Error: could not copy');")
-    finally:
-        web_view.page().runJavaScript("window.restoreAfterCapture && window.restoreAfterCapture();")
+        self.web_view = QWebEngineView(self)
+        self.page = EditorPage(self.profile, self.web_view)
+        self.web_view.setPage(self.page)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.web_view)
+
+        # capture state
+        self.busy = False
+        self.mode = "clipboard"
+        self.info = {}
+        self.slices = []
+        self.covered = 0.0
+        self.guard = 0
+
+        self.web_view.loadFinished.connect(self.on_load_finished)
+        self.web_view.load(QUrl.fromLocalFile(os.path.join(BASE_DIR, "word_style_editor.html")))
+
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.poll_triggers)
+        self.timer.start(POLL_INTERVAL_MS)
+
+    # ---------- helpers ----------
+    def js(self, code, callback=None):
+        if callback:
+            self.page.runJavaScript(code, callback)
+        else:
+            self.page.runJavaScript(code)
+
+    def toast(self, message, kind="success"):
+        self.js(f"window.showToast({json.dumps(message)}, {json.dumps(kind)});")
+
+    # ---------- pin (always on top) ----------
+    def toggle_pin(self):
+        self.pinned = not self.pinned
+        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, self.pinned)
+        self.show()  # changing window flags hides the window
+        self.sync_pin_state()
+
+    def sync_pin_state(self):
+        self.js(f"window.setPinned && window.setPinned({str(self.pinned).lower()});")
+
+    def on_load_finished(self, ok):
+        if ok:
+            self.sync_pin_state()
+
+    # ---------- polling the page for button clicks ----------
+    def poll_triggers(self):
+        self.js(
+            "(function(){"
+            "var r={req:window.pyCaptureRequest||'',pin:!!window.pyPinTrigger};"
+            "window.pyCaptureRequest='';window.pyPinTrigger=false;"
+            "return JSON.stringify(r);})();",
+            self.handle_triggers,
+        )
+
+    def handle_triggers(self, result):
+        if not result:
+            return
+        try:
+            t = json.loads(result)
+        except (TypeError, ValueError):
+            return
+        if t.get("pin"):
+            self.toggle_pin()
+        req = t.get("req")
+        if req == "folder":
+            self.open_captures_folder()
+        elif req in ("clipboard", "save"):
+            self.start_capture(req)
+
+    def open_captures_folder(self):
+        os.makedirs(CAPTURE_DIR, exist_ok=True)
+        os.startfile(CAPTURE_DIR)
+
+    # ---------- capture: scroll, grab, stitch ----------
+    def start_capture(self, mode):
+        if self.busy:
+            return
+        self.busy = True
+        self.mode = mode
+        self.js("window.prepareForCapture && window.prepareForCapture();")
+        QTimer.singleShot(250, self.read_info)  # let the page re-layout in capture mode
+
+    def read_info(self):
+        self.js("window.getCaptureInfo && window.getCaptureInfo();", self.begin_stitch)
+
+    def begin_stitch(self, result):
+        try:
+            self.info = json.loads(result)
+        except (TypeError, ValueError):
+            return self.fail("could not read the document")
+        self.slices, self.covered, self.guard = [], 0.0, 0
+        self.scroll_next()
+
+    def scroll_next(self):
+        target = int(self.info["y"] + self.covered)
+        self.js(f"window.scrollTo(0,{target});")
+        QTimer.singleShot(
+            SCROLL_SETTLE_MS, lambda: self.js("window.scrollY;", self.grab_slice)
+        )
+
+    def grab_slice(self, scroll_y):
+        try:
+            pixmap = self.web_view.grab()
+            ratio = pixmap.devicePixelRatio()
+            view_h = pixmap.height() / ratio
+            view_y = self.info["y"] + self.covered - float(scroll_y)
+            remaining = self.info["h"] - self.covered
+            taken = min(view_h - view_y, remaining)
+            self.guard += 1
+            if taken <= 0.5 or self.guard > MAX_SLICES:
+                raise RuntimeError("capture did not advance")
+
+            x_px = round(self.info["x"] * ratio)
+            w_px = round(self.info["w"] * ratio)
+            y_px = round(view_y * ratio)
+            h_px = max(1, round(taken * ratio))
+            self.slices.append(pixmap.copy(x_px, y_px, w_px, h_px).toImage())
+            self.covered += taken
+
+            if self.covered >= self.info["h"] - 0.5:
+                self.stitch(ratio)
+            else:
+                self.scroll_next()
+        except Exception as e:
+            self.fail(str(e))
+
+    def stitch(self, ratio):
+        try:
+            total_h = sum(s.height() for s in self.slices)
+            image = QImage(self.slices[0].width(), total_h, QImage.Format.Format_RGB32)
+            image.fill(QColor("white"))
+            painter = QPainter(image)
+            y = 0
+            for s in self.slices:
+                painter.drawImage(0, y, s)
+                y += s.height()
+            painter.end()
+            self.breaks_px = [round(b * ratio) for b in self.info.get("breaks", [])]
+            self.deliver(image)
+        except Exception as e:
+            self.fail(str(e))
+
+    # ---------- deliver the finished image ----------
+    def deliver(self, image):
+        os.makedirs(CAPTURE_DIR, exist_ok=True)
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        if image.height() > MAX_CLIPBOARD_PX:
+            pages = split_pages(image, self.breaks_px, PAGE_PX)
+            for i, page_img in enumerate(pages, 1):
+                page_img.save(os.path.join(CAPTURE_DIR, f"equation_{stamp}_page{i}.png"), "PNG")
+            self.toast(f"Long document: saved {len(pages)} pages in Captures", "warn")
+            self.open_captures_folder()
+            return self.finish()
+
+        default_path = os.path.join(CAPTURE_DIR, f"equation_{stamp}.png")
+        if self.mode == "save":
+            target, _ = QFileDialog.getSaveFileName(
+                self, "Save image", default_path, "PNG image (*.png)"
+            )
+            if target:
+                image.save(target, "PNG")
+                self.toast(f"Saved: {os.path.basename(target)}")
+            else:
+                self.toast("Save cancelled", "warn")
+        else:
+            image.save(default_path, "PNG")  # backend copy
+            copy_qimage_to_clipboard(image)
+            self.toast("Copied to clipboard (also saved in Captures)")
+        self.finish()
+
+    def fail(self, reason):
+        print(f"Capture error: {reason}")
+        self.toast("Error: capture failed", "error")
+        self.finish()
+
+    def finish(self):
+        self.js("window.restoreAfterCapture && window.restoreAfterCapture();")
+        self.js("window.scrollTo(0,0);")
+        self.busy = False
 
 
-def check_screenshot_trigger():
-    web_view.page().runJavaScript(
-        "window.pyScreenshotTrigger === true ? true : false;",
-        lambda result: (handle_screenshot_click(), web_view.page().runJavaScript("window.pyScreenshotTrigger = false;")) if result else None
-    )
-
-
-timer = QTimer()
-timer.timeout.connect(check_screenshot_trigger)
-timer.start(300)
-
-window.show()
-sys.exit(app.exec())
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = EquationStudio()
+    window.show()
+    sys.exit(app.exec())

@@ -170,6 +170,20 @@ body.capturing #documentArea math-field{color:#111!important;border-color:transp
   .doc-hint{left:18px;top:20px}
   .brand-sub,.chip .chip-text{display:none}
 }
+/* Split button: Copy as Image + menu arrow */
+.btn-split{display:flex}
+.btn-split .btn:first-child{border-top-right-radius:0;border-bottom-right-radius:0}
+.btn-split .btn:last-child{border-top-left-radius:0;border-bottom-left-radius:0;padding:0 10px;border-left:1px solid rgba(255,255,255,.25)}
+
+/* Capture mode: only the clean document stays visible */
+body.capturing .app-header,
+body.capturing .action-bar,
+body.capturing .format-bar,
+body.capturing .ribbon,
+body.capturing .status-bar,
+body.capturing #toastNotification{display:none!important}
+body.capturing #documentArea{min-height:0!important}
+
 </style>
 </head>
 <body>
@@ -196,8 +210,10 @@ body.capturing #documentArea math-field{color:#111!important;border-color:transp
     <button class="btn" id="copyLatexBtn" title="Ctrl+Shift+L"><span data-icon="code" data-size="16"></span><span class="txt">Copy LaTeX</span></button>
     <button class="btn btn-danger" id="delEqBtn" title="Delete the selected equation"><span data-icon="trash" data-size="16"></span><span class="txt">Delete Equation</span></button>
     <button class="btn btn-danger" id="clearBtn" title="Clear the whole document"><span data-icon="x" data-size="16"></span><span class="txt">Clear</span></button>
-    <button class="btn btn-dark" id="screenshotBtn" title="Ctrl+Shift+C"><span data-icon="image" data-size="16"></span><span class="txt">Copy as Image</span></button>
-  </section>
+<div class="btn-split">
+  <button class="btn btn-dark" id="screenshotBtn" title="Ctrl+Shift+C"><span data-icon="image" data-size="16"></span><span class="txt">Copy as Image</span></button>
+  <button class="btn btn-dark" id="captureMenuBtn" title="More save options"><span data-icon="chev" data-size="14"></span></button>
+</div>  </section>
 
   <section class="format-bar no-focus-steal">
     <button class="fmt" id="undoBtn" title="Undo (Ctrl+Z)"><span data-icon="undo" data-size="16"></span></button>
@@ -285,8 +301,9 @@ const ICONS = {
   list:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
   alignL:'<path d="M3 6h18M3 12h12M3 18h18"/>',
   alignC:'<path d="M3 6h18M7 12h10M3 18h18"/>',
-  alignR:'<path d="M3 6h18M9 12h12M3 18h18"/>'
-};
+  alignR:'<path d="M3 6h18M9 12h12M3 18h18"/>',
+  chev:'<path d="M6 9l6 6 6-6"/>'
+  };
 function icon(n, s = 18){
   return `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n]||''}</svg>`;
 }
@@ -718,16 +735,33 @@ function clearDoc(){
   afterChange(true); pushHistory();
   showToast('Cleared. Press Ctrl+Z to undo', 'warn');
 }
-function takeScreenshot(){
+function takeScreenshot(mode){
   if (isEmpty()) return showToast('Nothing to copy yet', 'warn');
-  window.pyScreenshotTrigger = true;
+  window.pyCaptureRequest = (typeof mode === 'string') ? mode : 'clipboard';
 }
+(function buildCaptureMenu(){
+  const panel = document.createElement('div');
+  panel.className = 'dropdown-panel no-focus-steal';
+  panel.style.minWidth = '230px'; panel.style.padding = '8px';
+  [
+    ['Copy to clipboard', 'Ctrl+Shift+C', () => takeScreenshot('clipboard')],
+    ['Save as PNG…',      '',             () => takeScreenshot('save')],
+    ['Open Captures folder', '',          () => { window.pyCaptureRequest = 'folder'; }]
+  ].forEach(([label, hint, fn]) => {
+    const it = document.createElement('div'); it.className = 'menu-item';
+    it.innerHTML = '<span></span><small>' + hint + '</small>';
+    it.firstChild.textContent = label;
+    it.addEventListener('click', () => { closeAllDropdowns(); fn(); });
+    panel.appendChild(it);
+  });
+  bindPanel($('#captureMenuBtn'), panel);
+})();
 $('#insertEquationBtn').addEventListener('click', () => createEquation(''));
 $('#nextStepBtn').addEventListener('click', nextStep);
 $('#copyLatexBtn').addEventListener('click', copyLatex);
 $('#delEqBtn').addEventListener('click', deleteActiveEquation);
 $('#clearBtn').addEventListener('click', clearDoc);
-$('#screenshotBtn').addEventListener('click', takeScreenshot);
+$('#screenshotBtn').addEventListener('click', () => takeScreenshot('clipboard'));
 
 /* Called by Python when it captures the document */
 window.prepareForCapture = function(){
@@ -739,6 +773,13 @@ window.prepareForCapture = function(){
   window.scrollTo(0, 0);
 };
 window.restoreAfterCapture = function(){ document.body.classList.remove('capturing'); };
+/* Python asks for the document geometry (and safe page-break positions) */
+window.getCaptureInfo = function(){
+  const r = doc.getBoundingClientRect();
+  const top = r.top + window.scrollY;
+  const breaks = [...doc.children].map(c => c.getBoundingClientRect().bottom + window.scrollY - top);
+  return JSON.stringify({ x: r.left, y: top, w: r.width, h: Math.ceil(r.height), breaks: breaks });
+};
 
 /* ---------- pin (Python integration, added in the next step) ---------- */
 $('#pinBtn').addEventListener('click', () => { window.pyPinTrigger = true; });
