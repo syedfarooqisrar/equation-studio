@@ -1,24 +1,25 @@
+# 📁 FILE: D:\EquationTool\.gitignore
+# 📌 WHAT: Complete .gitignore, purani file ko isse replace karo (Ctrl+A, paste, Ctrl+S)
+
+# Runtime data
+web_storage/
+captures/
+*.log
+
 # Python
 __pycache__/
 *.pyc
-venv/
 .venv/
-
-# App runtime data (never commit)
-web_storage/
+venv/
 
 # Secrets
 .env
 *.env
 
-# Build output (for the .exe step later)
+# PyInstaller output
 build/
 dist/
 *.spec
 
-# OS / editor
-.DS_Store
-Thumbs.db
-.vscode/
-
-captures/
+# Release zips
+*.zip
