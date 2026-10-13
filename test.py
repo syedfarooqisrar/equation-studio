@@ -1,26 +1,80 @@
-# 📁 FILE: test.py
-# 📌 WHAT: Equation Studio window: pin toggle + full-document capture (scroll & stitch)
+# 📁 FILE: D:\EquationTool\test.py
+# 📌 WHAT: Equation Studio window: pin toggle + full-document capture + exe-safe paths + icon + logging
+
+import ctypes
 import json
+import logging
 import os
 import sys
 from datetime import datetime
 
 import win32clipboard
 from PySide6.QtCore import QBuffer, QIODevice, Qt, QTimer, QUrl
-from PySide6.QtGui import QColor, QImage, QPainter
+from PySide6.QtGui import QColor, QIcon, QImage, QPainter
 from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QApplication, QFileDialog, QVBoxLayout, QWidget
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-os.chdir(BASE_DIR)
-CAPTURE_DIR = os.path.join(BASE_DIR, "captures")
+APP_NAME = "EquationStudio"
+APP_ID = "FarooqBuilds.EquationStudio"
+FROZEN = getattr(sys, "frozen", False)
+
+# Read-only bundled files (html, js, fonts, icon).
+# Dev mode: this folder. Exe mode: PyInstaller's _internal folder.
+RES_DIR = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+
+
+def resolve_data_dir():
+    """Writable folder for web_storage, captures and logs.
+    Exe mode: folder next to the exe (portable). Falls back to %LOCALAPPDATA% if not writable."""
+    if FROZEN:
+        base = os.path.dirname(sys.executable)
+    else:
+        base = os.path.dirname(os.path.abspath(__file__))
+    try:
+        os.makedirs(base, exist_ok=True)
+        probe = os.path.join(base, ".write_test")
+        with open(probe, "w", encoding="utf-8") as f:
+            f.write("ok")
+        os.remove(probe)
+        return base
+    except OSError:
+        fallback = os.path.join(
+            os.environ.get("LOCALAPPDATA", os.path.expanduser("~")), APP_NAME
+        )
+        os.makedirs(fallback, exist_ok=True)
+        return fallback
+
+
+DATA_DIR = resolve_data_dir()
+CAPTURE_DIR = os.path.join(DATA_DIR, "captures")
+STORAGE_DIR = os.path.join(DATA_DIR, "web_storage")
+LOG_PATH = os.path.join(DATA_DIR, "equation_studio.log")
+HTML_PATH = os.path.join(RES_DIR, "word_style_editor.html")
+ICON_PATH = os.path.join(RES_DIR, "icon.ico")
 
 POLL_INTERVAL_MS = 300
-SCROLL_SETTLE_MS = 180      # wait after scrolling so the page repaints
-MAX_CLIPBOARD_PX = 12000    # taller than this -> split into pages
-PAGE_PX = 5000              # target page height when splitting
-MAX_SLICES = 300            # safety guard against endless loops
+SCROLL_SETTLE_MS = 180  # wait after scrolling so the page repaints
+MAX_CLIPBOARD_PX = 12000  # taller than this -> split into pages
+PAGE_PX = 5000  # target page height when splitting
+MAX_SLICES = 300  # safety guard against endless loops
+
+handlers = [logging.FileHandler(LOG_PATH, encoding="utf-8")]
+if not FROZEN:
+    handlers.append(logging.StreamHandler())
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+    handlers=handlers,
+)
+log = logging.getLogger(APP_NAME)
+
+
+def log_uncaught(exc_type, exc, tb):
+    log.critical("Uncaught exception", exc_info=(exc_type, exc, tb))
+
+
+sys.excepthook = log_uncaught
 
 
 def copy_qimage_to_clipboard(qimage):
@@ -31,7 +85,6 @@ def copy_qimage_to_clipboard(qimage):
     rgb.save(buffer, "BMP")
     data = bytes(buffer.data())[14:]  # strip the 14-byte BMP file header
     buffer.close()
-
     win32clipboard.OpenClipboard()
     try:
         win32clipboard.EmptyClipboard()
@@ -57,25 +110,23 @@ def split_pages(image, breaks_px, max_px):
 
 class EditorPage(QWebEnginePage):
     def javaScriptConsoleMessage(self, level, message, lineNumber, sourceID):
-        if "math fonts could not be loaded" in message:  # harmless MathLive warning
-            return
-        print(f"JS Console: {message} (line {lineNumber})")
+        log.info("JS Console: %s (line %s)", message, lineNumber)
 
 
 class EquationStudio(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Equation Studio")
+        if os.path.exists(ICON_PATH):
+            self.setWindowIcon(QIcon(ICON_PATH))
         self.resize(1000, 800)
-
         self.pinned = True
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
 
-        storage_path = os.path.join(BASE_DIR, "web_storage")
-        os.makedirs(storage_path, exist_ok=True)
+        os.makedirs(STORAGE_DIR, exist_ok=True)
         self.profile = QWebEngineProfile("EquationEditorProfile", self)
-        self.profile.setPersistentStoragePath(storage_path)
-        self.profile.setCachePath(os.path.join(storage_path, "cache"))
+        self.profile.setPersistentStoragePath(STORAGE_DIR)
+        self.profile.setCachePath(os.path.join(STORAGE_DIR, "cache"))
         self.profile.setPersistentCookiesPolicy(
             QWebEngineProfile.PersistentCookiesPolicy.ForcePersistentCookies
         )
@@ -93,11 +144,12 @@ class EquationStudio(QWidget):
         self.mode = "clipboard"
         self.info = {}
         self.slices = []
+        self.breaks_px = []
         self.covered = 0.0
         self.guard = 0
 
         self.web_view.loadFinished.connect(self.on_load_finished)
-        self.web_view.load(QUrl.fromLocalFile(os.path.join(BASE_DIR, "word_style_editor.html")))
+        self.web_view.load(QUrl.fromLocalFile(HTML_PATH))
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.poll_triggers)
@@ -126,6 +178,8 @@ class EquationStudio(QWidget):
     def on_load_finished(self, ok):
         if ok:
             self.sync_pin_state()
+        else:
+            log.error("Failed to load %s", HTML_PATH)
 
     # ---------- polling the page for button clicks ----------
     def poll_triggers(self):
@@ -233,7 +287,9 @@ class EquationStudio(QWidget):
         if image.height() > MAX_CLIPBOARD_PX:
             pages = split_pages(image, self.breaks_px, PAGE_PX)
             for i, page_img in enumerate(pages, 1):
-                page_img.save(os.path.join(CAPTURE_DIR, f"equation_{stamp}_page{i}.png"), "PNG")
+                page_img.save(
+                    os.path.join(CAPTURE_DIR, f"equation_{stamp}_page{i}.png"), "PNG"
+                )
             self.toast(f"Long document: saved {len(pages)} pages in Captures", "warn")
             self.open_captures_folder()
             return self.finish()
@@ -255,7 +311,7 @@ class EquationStudio(QWidget):
         self.finish()
 
     def fail(self, reason):
-        print(f"Capture error: {reason}")
+        log.error("Capture error: %s", reason)
         self.toast("Error: capture failed", "error")
         self.finish()
 
@@ -266,6 +322,10 @@ class EquationStudio(QWidget):
 
 
 if __name__ == "__main__":
+    try:  # separate taskbar identity so our icon shows (not python's)
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_ID)
+    except Exception:
+        pass
     app = QApplication(sys.argv)
     window = EquationStudio()
     window.show()

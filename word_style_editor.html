@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Equation Studio</title>
 <script src="mathlive.min.js"></script>
+<script>
+  (function () {
+    var MFE = window.MathfieldElement || (window.MathLive && window.MathLive.MathfieldElement);
+    if (MFE) { MFE.fontsDirectory = "./fonts"; MFE.soundsDirectory = null; }
+  })();
+</script>
 <style>
 :root{
   --font:'Inter','Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;
