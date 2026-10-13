@@ -1,5 +1,5 @@
 # 📁 FILE: D:\EquationTool\test.py
-# 📌 WHAT: Equation Studio window: pin toggle + full-document capture + exe-safe paths + icon + logging
+# 📌 WHAT: Equation Studio window: pin, page-aware capture (segments), PDF export/print, exe-safe paths, logging
 
 import ctypes
 import json
@@ -9,8 +9,8 @@ import sys
 from datetime import datetime
 
 import win32clipboard
-from PySide6.QtCore import QBuffer, QIODevice, Qt, QTimer, QUrl
-from PySide6.QtGui import QColor, QIcon, QImage, QPainter
+from PySide6.QtCore import QBuffer, QIODevice, QMarginsF, Qt, QTimer, QUrl
+from PySide6.QtGui import QColor, QIcon, QImage, QPageLayout, QPageSize, QPainter
 from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QApplication, QFileDialog, QVBoxLayout, QWidget
@@ -55,9 +55,11 @@ ICON_PATH = os.path.join(RES_DIR, "icon.ico")
 
 POLL_INTERVAL_MS = 300
 SCROLL_SETTLE_MS = 180  # wait after scrolling so the page repaints
+CAPTURE_SETTLE_MS = 300  # wait after switching the page to capture mode
 MAX_CLIPBOARD_PX = 12000  # taller than this -> split into pages
 PAGE_PX = 5000  # target page height when splitting
-MAX_SLICES = 300  # safety guard against endless loops
+MAX_SLICES = 300  # safety guard against endless loops (per segment)
+PDF_MARGIN_MM = 19.05  # 0.75 inch, matches the 72 px page margin on screen
 
 handlers = [logging.FileHandler(LOG_PATH, encoding="utf-8")]
 if not FROZEN:
@@ -108,6 +110,16 @@ def split_pages(image, breaks_px, max_px):
     return pages
 
 
+def make_pdf_layout(size_name):
+    size_id = QPageSize.PageSizeId.Letter if size_name == "Letter" else QPageSize.PageSizeId.A4
+    return QPageLayout(
+        QPageSize(size_id),
+        QPageLayout.Orientation.Portrait,
+        QMarginsF(PDF_MARGIN_MM, PDF_MARGIN_MM, PDF_MARGIN_MM, PDF_MARGIN_MM),
+        QPageLayout.Unit.Millimeter,
+    )
+
+
 class EditorPage(QWebEnginePage):
     def javaScriptConsoleMessage(self, level, message, lineNumber, sourceID):
         log.info("JS Console: %s (line %s)", message, lineNumber)
@@ -119,7 +131,7 @@ class EquationStudio(QWidget):
         self.setWindowTitle("Equation Studio")
         if os.path.exists(ICON_PATH):
             self.setWindowIcon(QIcon(ICON_PATH))
-        self.resize(1000, 800)
+        self.resize(1100, 820)
         self.pinned = True
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
 
@@ -134,6 +146,7 @@ class EquationStudio(QWidget):
         self.web_view = QWebEngineView(self)
         self.page = EditorPage(self.profile, self.web_view)
         self.web_view.setPage(self.page)
+        self.page.pdfPrintingFinished.connect(self.on_pdf_done)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -142,11 +155,20 @@ class EquationStudio(QWidget):
         # capture state
         self.busy = False
         self.mode = "clipboard"
+        self.page_no = None
+        self.segments = []
+        self.seg_index = 0
+        self.seg_images = []
+        self.breaks_src = []
         self.info = {}
         self.slices = []
         self.breaks_px = []
         self.covered = 0.0
         self.guard = 0
+        self.ratio = 1.0
+
+        # pdf state
+        self.pdf_mode = "pdf"
 
         self.web_view.loadFinished.connect(self.on_load_finished)
         self.web_view.load(QUrl.fromLocalFile(HTML_PATH))
@@ -200,33 +222,55 @@ class EquationStudio(QWidget):
             return
         if t.get("pin"):
             self.toggle_pin()
-        req = t.get("req")
-        if req == "folder":
+        req = t.get("req") or ""
+        if not req:
+            return
+        name, _, arg = req.partition(":")  # e.g. "clipboard:2" = copy page 2
+        page = int(arg) if arg.isdigit() else None
+        if name == "folder":
             self.open_captures_folder()
-        elif req in ("clipboard", "save"):
-            self.start_capture(req)
+        elif name in ("clipboard", "save"):
+            self.start_capture(name, page)
+        elif name in ("pdf", "print"):
+            self.export_pdf(name)
 
     def open_captures_folder(self):
         os.makedirs(CAPTURE_DIR, exist_ok=True)
         os.startfile(CAPTURE_DIR)
 
-    # ---------- capture: scroll, grab, stitch ----------
-    def start_capture(self, mode):
+    # ---------- capture: scroll, grab, stitch (one or more segments) ----------
+    def start_capture(self, mode, page=None):
         if self.busy:
             return
         self.busy = True
         self.mode = mode
+        self.page_no = page
         self.js("window.prepareForCapture && window.prepareForCapture();")
-        QTimer.singleShot(250, self.read_info)  # let the page re-layout in capture mode
+        QTimer.singleShot(CAPTURE_SETTLE_MS, self.read_info)  # let the page re-layout
 
     def read_info(self):
-        self.js("window.getCaptureInfo && window.getCaptureInfo();", self.begin_stitch)
+        arg = "null" if self.page_no is None else str(int(self.page_no))
+        self.js(
+            f"window.getCaptureInfo && window.getCaptureInfo({arg});", self.begin_stitch
+        )
 
     def begin_stitch(self, result):
         try:
-            self.info = json.loads(result)
+            data = json.loads(result)
         except (TypeError, ValueError):
             return self.fail("could not read the document")
+        self.segments = data.get("segments") or []
+        self.breaks_src = data.get("breaks") or []
+        if not self.segments:
+            return self.fail("nothing to capture")
+        self.seg_images = []
+        self.seg_index = 0
+        self.next_segment()
+
+    def next_segment(self):
+        if self.seg_index >= len(self.segments):
+            return self.join_segments()
+        self.info = self.segments[self.seg_index]
         self.slices, self.covered, self.guard = [], 0.0, 0
         self.scroll_next()
 
@@ -241,6 +285,7 @@ class EquationStudio(QWidget):
         try:
             pixmap = self.web_view.grab()
             ratio = pixmap.devicePixelRatio()
+            self.ratio = ratio
             view_h = pixmap.height() / ratio
             view_y = self.info["y"] + self.covered - float(scroll_y)
             remaining = self.info["h"] - self.covered
@@ -249,7 +294,7 @@ class EquationStudio(QWidget):
             if taken <= 0.5 or self.guard > MAX_SLICES:
                 raise RuntimeError("capture did not advance")
 
-            x_px = round(self.info["x"] * ratio)
+            x_px = max(0, round(self.info["x"] * ratio))
             w_px = round(self.info["w"] * ratio)
             y_px = round(view_y * ratio)
             h_px = max(1, round(taken * ratio))
@@ -257,13 +302,13 @@ class EquationStudio(QWidget):
             self.covered += taken
 
             if self.covered >= self.info["h"] - 0.5:
-                self.stitch(ratio)
+                self.finish_segment()
             else:
                 self.scroll_next()
         except Exception as e:
             self.fail(str(e))
 
-    def stitch(self, ratio):
+    def finish_segment(self):
         try:
             total_h = sum(s.height() for s in self.slices)
             image = QImage(self.slices[0].width(), total_h, QImage.Format.Format_RGB32)
@@ -274,7 +319,30 @@ class EquationStudio(QWidget):
                 painter.drawImage(0, y, s)
                 y += s.height()
             painter.end()
-            self.breaks_px = [round(b * ratio) for b in self.info.get("breaks", [])]
+            self.seg_images.append(image)
+            self.seg_index += 1
+            self.next_segment()
+        except Exception as e:
+            self.fail(str(e))
+
+    def join_segments(self):
+        try:
+            if len(self.seg_images) == 1:
+                image = self.seg_images[0]
+                self.breaks_px = [round(b * self.ratio) for b in self.breaks_src]
+            else:
+                width = max(i.width() for i in self.seg_images)
+                height = sum(i.height() for i in self.seg_images)
+                image = QImage(width, height, QImage.Format.Format_RGB32)
+                image.fill(QColor("white"))
+                painter = QPainter(image)
+                y, breaks = 0, []
+                for img in self.seg_images:
+                    painter.drawImage(0, y, img)
+                    y += img.height()
+                    breaks.append(y)  # every page boundary is a safe cut
+                painter.end()
+                self.breaks_px = breaks
             self.deliver(image)
         except Exception as e:
             self.fail(str(e))
@@ -283,6 +351,7 @@ class EquationStudio(QWidget):
     def deliver(self, image):
         os.makedirs(CAPTURE_DIR, exist_ok=True)
         stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        tag = f"_p{self.page_no}" if self.page_no else ""
 
         if image.height() > MAX_CLIPBOARD_PX:
             pages = split_pages(image, self.breaks_px, PAGE_PX)
@@ -294,7 +363,8 @@ class EquationStudio(QWidget):
             self.open_captures_folder()
             return self.finish()
 
-        default_path = os.path.join(CAPTURE_DIR, f"equation_{stamp}.png")
+        default_path = os.path.join(CAPTURE_DIR, f"equation_{stamp}{tag}.png")
+        label = f"Page {self.page_no}" if self.page_no else "Image"
         if self.mode == "save":
             target, _ = QFileDialog.getSaveFileName(
                 self, "Save image", default_path, "PNG image (*.png)"
@@ -307,7 +377,7 @@ class EquationStudio(QWidget):
         else:
             image.save(default_path, "PNG")  # backend copy
             copy_qimage_to_clipboard(image)
-            self.toast("Copied to clipboard (also saved in Captures)")
+            self.toast(f"{label} copied to clipboard (also saved in Captures)")
         self.finish()
 
     def fail(self, reason):
@@ -319,6 +389,47 @@ class EquationStudio(QWidget):
         self.js("window.restoreAfterCapture && window.restoreAfterCapture();")
         self.js("window.scrollTo(0,0);")
         self.busy = False
+
+    # ---------- PDF: save / print ----------
+    def export_pdf(self, mode):
+        if self.busy:
+            return
+        self.pdf_mode = mode
+        self.js("window.getPageSize ? window.getPageSize() : 'A4';", self.pdf_with_size)
+
+    def pdf_with_size(self, size_name):
+        os.makedirs(CAPTURE_DIR, exist_ok=True)
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        if self.pdf_mode == "pdf":
+            default_path = os.path.join(CAPTURE_DIR, f"equation_{stamp}.pdf")
+            target, _ = QFileDialog.getSaveFileName(
+                self, "Save PDF", default_path, "PDF document (*.pdf)"
+            )
+            if not target:
+                return self.toast("Save cancelled", "warn")
+        else:
+            target = os.path.join(CAPTURE_DIR, f"print_{stamp}.pdf")
+        self.page.printToPdf(target, make_pdf_layout(size_name or "A4"))
+
+    def on_pdf_done(self, path, ok):
+        if not ok:
+            log.error("PDF export failed: %s", path)
+            return self.toast("Error: PDF export failed", "error")
+        if self.pdf_mode == "print":
+            os.startfile(path)
+            self.toast("PDF opened. Press Ctrl+P there to print", "warn")
+        else:
+            self.toast(f"Saved: {os.path.basename(path)}")
+
+    # ---------- clean shutdown (removes the 'Release of profile' warning) ----------
+    def closeEvent(self, event):
+        self.timer.stop()
+        try:
+            self.web_view.setPage(None)
+        except Exception:
+            pass
+        self.page.deleteLater()
+        super().closeEvent(event)
 
 
 if __name__ == "__main__":
