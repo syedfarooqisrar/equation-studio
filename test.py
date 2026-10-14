@@ -1,5 +1,5 @@
 # 📁 FILE: D:\EquationTool\test.py
-# 📌 WHAT: Equation Studio window: pin, page-aware capture (segments), PDF export/print, exe-safe paths, logging
+# 📌 WHAT: Equation Studio window (fits the screen, remembers size/position), page-aware capture, PDF export/print, exe-safe paths, logging
 
 import ctypes
 import json
@@ -9,7 +9,7 @@ import sys
 from datetime import datetime
 
 import win32clipboard
-from PySide6.QtCore import QBuffer, QIODevice, QMarginsF, Qt, QTimer, QUrl
+from PySide6.QtCore import QBuffer, QIODevice, QMarginsF, QSettings, Qt, QTimer, QUrl
 from PySide6.QtGui import QColor, QIcon, QImage, QPageLayout, QPageSize, QPainter
 from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
 from PySide6.QtWebEngineWidgets import QWebEngineView
@@ -25,7 +25,7 @@ RES_DIR = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
 
 
 def resolve_data_dir():
-    """Writable folder for web_storage, captures and logs.
+    """Writable folder for web_storage, captures, settings and logs.
     Exe mode: folder next to the exe (portable). Falls back to %LOCALAPPDATA% if not writable."""
     if FROZEN:
         base = os.path.dirname(sys.executable)
@@ -50,6 +50,7 @@ DATA_DIR = resolve_data_dir()
 CAPTURE_DIR = os.path.join(DATA_DIR, "captures")
 STORAGE_DIR = os.path.join(DATA_DIR, "web_storage")
 LOG_PATH = os.path.join(DATA_DIR, "equation_studio.log")
+SETTINGS_PATH = os.path.join(DATA_DIR, "settings.ini")
 HTML_PATH = os.path.join(RES_DIR, "word_style_editor.html")
 ICON_PATH = os.path.join(RES_DIR, "icon.ico")
 
@@ -131,9 +132,8 @@ class EquationStudio(QWidget):
         self.setWindowTitle("Equation Studio")
         if os.path.exists(ICON_PATH):
             self.setWindowIcon(QIcon(ICON_PATH))
-        self.resize(1100, 820)
-        self.pinned = True
-        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
+        self.settings = QSettings(SETTINGS_PATH, QSettings.Format.IniFormat)
+        self.place_window()
 
         os.makedirs(STORAGE_DIR, exist_ok=True)
         self.profile = QWebEngineProfile("EquationEditorProfile", self)
@@ -177,6 +177,30 @@ class EquationStudio(QWidget):
         self.timer.timeout.connect(self.poll_triggers)
         self.timer.start(POLL_INTERVAL_MS)
 
+    # ---------- window size / position ----------
+    def place_window(self):
+        """Open at a size that fits the usable screen (taskbar excluded).
+        The last size/position is remembered between runs."""
+        avail = QApplication.primaryScreen().availableGeometry()
+        self.setMinimumSize(min(720, avail.width()), min(520, max(300, avail.height() - 80)))
+
+        saved = self.settings.value("geometry")
+        if saved is not None and self.restoreGeometry(saved):
+            g = self.geometry()
+            fits = g.width() <= avail.width() and g.height() <= avail.height()
+            visible = avail.intersects(g)
+            if fits and visible:
+                return
+            self.setWindowState(Qt.WindowState.WindowNoState)  # bad saved state -> use default
+
+        w = min(1100, int(avail.width() * 0.9))
+        h = min(820, int(avail.height() * 0.86))
+        self.resize(w, h)
+        self.move(
+            avail.x() + (avail.width() - w) // 2,
+            avail.y() + max(0, (avail.height() - h) // 2 - 12),
+        )
+
     # ---------- helpers ----------
     def js(self, code, callback=None):
         if callback:
@@ -187,42 +211,20 @@ class EquationStudio(QWidget):
     def toast(self, message, kind="success"):
         self.js(f"window.showToast({json.dumps(message)}, {json.dumps(kind)});")
 
-    # ---------- pin (always on top) ----------
-    def toggle_pin(self):
-        self.pinned = not self.pinned
-        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, self.pinned)
-        self.show()  # changing window flags hides the window
-        self.sync_pin_state()
-
-    def sync_pin_state(self):
-        self.js(f"window.setPinned && window.setPinned({str(self.pinned).lower()});")
-
     def on_load_finished(self, ok):
-        if ok:
-            self.sync_pin_state()
-        else:
+        if not ok:
             log.error("Failed to load %s", HTML_PATH)
 
     # ---------- polling the page for button clicks ----------
     def poll_triggers(self):
         self.js(
-            "(function(){"
-            "var r={req:window.pyCaptureRequest||'',pin:!!window.pyPinTrigger};"
-            "window.pyCaptureRequest='';window.pyPinTrigger=false;"
-            "return JSON.stringify(r);})();",
-            self.handle_triggers,
+            "(function(){var r=window.pyCaptureRequest||'';"
+            "window.pyCaptureRequest='';return r;})();",
+            self.handle_request,
         )
 
-    def handle_triggers(self, result):
-        if not result:
-            return
-        try:
-            t = json.loads(result)
-        except (TypeError, ValueError):
-            return
-        if t.get("pin"):
-            self.toggle_pin()
-        req = t.get("req") or ""
+    def handle_request(self, result):
+        req = result if isinstance(result, str) else ""
         if not req:
             return
         name, _, arg = req.partition(":")  # e.g. "clipboard:2" = copy page 2
@@ -421,8 +423,13 @@ class EquationStudio(QWidget):
         else:
             self.toast(f"Saved: {os.path.basename(path)}")
 
-    # ---------- clean shutdown (removes the 'Release of profile' warning) ----------
+    # ---------- clean shutdown ----------
     def closeEvent(self, event):
+        try:
+            self.settings.setValue("geometry", self.saveGeometry())
+            self.settings.sync()
+        except Exception:
+            log.exception("could not save window geometry")
         self.timer.stop()
         try:
             self.web_view.setPage(None)

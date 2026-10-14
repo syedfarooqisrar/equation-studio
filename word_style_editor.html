@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- 📁 FILE: D:\EquationTool\word_style_editor.html -->
-<!-- 📌 WHAT: Equation Studio UI v1.1 - print/web layout, pages, hamburger menu, minimal ribbon -->
+<!-- 📌 WHAT: Equation Studio UI v1.2 - Word-style Equation tab, page tools (delete), page navigator, no always-on-top -->
 <html lang="en" data-theme="light" data-layout="print">
 <head>
 <meta charset="UTF-8">
@@ -104,11 +104,14 @@ svg{display:block}
 .chip-btn{height:26px;padding:0 11px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:11.5px;font-weight:600;cursor:pointer}
 .chip-btn:hover{color:var(--text);background:var(--surface-2)}
 .chip-btn.active{background:var(--accent-soft);border-color:var(--accent-border);color:var(--accent)}
-.sym-search{margin-left:auto;height:28px;width:170px;max-width:100%;padding:0 10px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface-2);color:var(--text);font-size:12.5px;outline:none}
+.sym-search{margin-left:auto;height:28px;width:190px;max-width:100%;padding:0 10px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface-2);color:var(--text);font-size:12.5px;outline:none}
 .sym-search:focus{border-color:var(--accent);background:var(--surface)}
-.sym-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(38px,1fr));gap:4px;padding:6px 12px 10px;max-height:130px;overflow-y:auto}
-.sym{height:34px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);color:var(--text);font-size:16px;cursor:pointer;transition:all .1s}
+.sym-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(38px,1fr));gap:4px;padding:6px 12px 10px;max-height:150px;overflow-y:auto}
+.sym{height:34px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);color:var(--text);font-size:16px;cursor:pointer;transition:all .1s;padding:0;display:grid;place-items:center;overflow:hidden}
+.sym{position:relative;user-select:none}
+.sym::after{content:"";position:absolute;inset:0;z-index:3}
 .sym:hover{background:var(--accent-soft);border-color:var(--accent-border);color:var(--accent)}
+.sym math-field{pointer-events:none;border:none!important;background:transparent!important;font-size:16px;color:inherit;min-width:0;padding:0}
 .sym-empty{grid-column:1/-1;color:var(--faint);font-size:12.5px;padding:8px 2px}
 
 /* ---------- Dropdown panels ---------- */
@@ -119,15 +122,21 @@ svg{display:block}
 .panel-title:not(:first-child){margin-top:14px}
 .panel-grid{display:grid;gap:8px}
 .dd-item{border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface-2);padding:8px 6px;cursor:pointer;display:flex;align-items:center;justify-content:center;min-height:46px;overflow:hidden;transition:all .12s}
+.dd-item{position:relative;user-select:none}
+.dd-item::after{content:"";position:absolute;inset:0;z-index:3}
 .dd-item:hover{background:var(--accent-soft);border-color:var(--accent-border)}
-.dd-item:active{transform:scale(.96)}
+.dd-item:active{transform:scale(.97)}
+.dd-item.labeled{flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:4px;padding:8px 10px}
+.dd-label{font-size:11px;font-weight:600;color:var(--muted)}
 .dd-item math-field{pointer-events:none;border:none!important;background:transparent!important;font-size:14px;max-width:100%;color:var(--text)}
+.dd-item.labeled math-field{font-size:13px}
 .menu-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r-sm);cursor:pointer;font-size:13px;font-weight:500;white-space:nowrap}
 .menu-item:hover{background:var(--accent-soft);color:var(--accent)}
 .menu-item small{color:var(--faint);margin-left:auto;padding-left:18px;font-weight:400}
 
 /* ---------- Workspace + document ---------- */
-#workspace{flex:1;min-height:0;overflow:auto;position:relative;background:var(--ws);padding:20px 16px 48px}
+#wsShell{position:relative;flex:1;min-height:0;display:flex}
+#workspace{flex:1;min-width:0;min-height:0;overflow:auto;position:relative;background:var(--ws);padding:20px 16px 56px}
 html[data-layout="web"] #workspace{background:var(--bg);padding:14px 16px 24px}
 #pageSizer{margin:0 auto}
 html[data-layout="web"] #pageSizer{max-width:1000px}
@@ -138,11 +147,22 @@ html[data-layout="web"] #pageSizer{max-width:1000px}
 #sheetUi{z-index:2;pointer-events:none}
 html[data-layout="print"] #sheetBg,html[data-layout="print"] #sheetUi{display:block}
 .sheet{position:absolute;left:0;background:var(--surface);border:1px solid var(--border);box-shadow:var(--sh-sm)}
-.sheet-tools{position:absolute;right:14px;display:flex;align-items:center;gap:2px;pointer-events:auto;opacity:.55;transition:opacity .15s;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:2px 4px}
-.sheet-tools:hover{opacity:1}
-.pg-num{font-size:11px;color:var(--muted);padding:0 6px;white-space:nowrap}
-.pt-btn{width:26px;height:26px;border:0;border-radius:6px;background:transparent;color:var(--muted);display:grid;place-items:center;cursor:pointer}
+
+/* per-page tools (top-right corner of every page) */
+.sheet-tools{position:absolute;right:12px;display:flex;align-items:center;gap:1px;pointer-events:auto;background:var(--surface);border:1px solid var(--border-strong);border-radius:8px;padding:1px 3px;box-shadow:var(--sh-sm)}
+.pg-num{font-size:10.5px;font-weight:600;color:var(--muted);padding:0 6px;white-space:nowrap}
+.pt-btn{width:22px;height:22px;border:0;border-radius:6px;background:transparent;color:var(--muted);display:grid;place-items:center;cursor:pointer;padding:0}
 .pt-btn:hover{background:var(--accent-soft);color:var(--accent)}
+.pt-btn.danger:hover{background:rgba(217,45,32,.12);color:var(--danger)}
+
+/* page navigator (bottom-right) */
+.page-nav{position:absolute;right:26px;bottom:14px;z-index:5;display:flex;align-items:center;gap:2px;background:var(--surface);border:1px solid var(--border-strong);border-radius:20px;padding:2px 4px;box-shadow:var(--sh-lg);font-size:12px;color:var(--muted)}
+.page-nav b{color:var(--text)}
+.page-nav span{padding:0 4px;white-space:nowrap}
+.page-nav button{width:22px;height:22px;border:0;background:transparent;border-radius:50%;color:var(--muted);cursor:pointer;display:grid;place-items:center;padding:0}
+.page-nav button:hover:not(:disabled){background:var(--accent-soft);color:var(--accent)}
+.page-nav button:disabled{opacity:.35;cursor:default}
+html[data-layout="web"] .page-nav{display:none}
 
 #documentArea{position:relative;z-index:1;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--r-lg);padding:30px 36px;min-height:380px;font-size:var(--doc-size);line-height:1.85;outline:none;overflow-wrap:anywhere;box-shadow:var(--sh-sm);transition:border-color .18s,box-shadow .18s}
 #documentArea:focus-within{border-color:var(--accent-border);box-shadow:0 0 0 4px var(--accent-soft),var(--sh-sm)}
@@ -153,7 +173,9 @@ html[data-layout="print"] #documentArea:focus-within{border:0;box-shadow:none}
 .doc-hint{position:absolute;z-index:1;left:36px;top:30px;color:var(--faint);pointer-events:none;font-size:var(--doc-size);line-height:1.85;display:none}
 html[data-layout="print"] .doc-hint{left:var(--pg-m);top:var(--pg-m);font-size:18px;line-height:1.8}
 .doc-wrap.is-empty .doc-hint{display:block}
-#documentArea math-field{display:inline-block;vertical-align:middle;border:1px solid transparent;border-radius:6px;padding:2px 8px;margin:0 3px;font-size:1em;min-width:26px;max-width:100%;background:transparent;color:inherit;transition:border-color .14s,background .14s}
+#documentArea math-field{display:inline-block;vertical-align:middle;border:1px solid transparent;border-radius:4px;padding:0 2px;margin:0;font-size:1em;min-width:22px;min-height:0;max-width:100%;background:transparent;color:inherit;transition:border-color .14s,background .14s}
+#documentArea math-field::part(container){padding:0;min-height:0}
+#documentArea math-field::part(content){padding:0}
 #documentArea math-field:hover{border-color:var(--border-strong)}
 #documentArea math-field:focus-within{border-color:var(--accent);background:var(--accent-soft)}
 math-field::part(virtual-keyboard-toggle),math-field::part(menu-toggle){display:none!important}
@@ -202,20 +224,27 @@ math-field::part(virtual-keyboard-toggle),math-field::part(menu-toggle){display:
 #toastNotification[data-type="warn"] .toast-icon{background:#f79009}
 #toastNotification[data-type="error"] .toast-icon{background:#f04438}
 
-/* ---------- Help modal ---------- */
-#helpModal{position:fixed;inset:0;background:rgba(10,12,18,.5);display:none;align-items:center;justify-content:center;z-index:100000;padding:16px}
-#helpModal.open{display:flex}
-.modal-card{background:var(--surface);color:var(--text);border-radius:var(--r-lg);box-shadow:var(--sh-lg);padding:22px 24px;width:460px;max-width:100%;max-height:90vh;overflow:auto}
+/* ---------- Modals ---------- */
+#helpModal,#latexModal{position:fixed;inset:0;background:rgba(10,12,18,.5);display:none;align-items:center;justify-content:center;z-index:100000;padding:16px}
+#helpModal.open,#latexModal.open{display:flex}
+.modal-card{background:var(--surface);color:var(--text);border-radius:var(--r-lg);box-shadow:var(--sh-lg);padding:22px 24px;width:480px;max-width:100%;max-height:90vh;overflow:auto}
 .modal-card h3{margin:0 0 12px;font-size:16px}
 .kb-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px}
 .kb-row:last-of-type{border-bottom:none}
 kbd{background:var(--surface-2);border:1px solid var(--border-strong);border-bottom-width:2px;border-radius:5px;padding:2px 7px;font-size:11.5px;font-family:inherit}
+#latexInput{width:100%;min-height:96px;resize:vertical;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface-2);color:var(--text);padding:10px 12px;font:13px/1.5 Consolas,'Courier New',monospace;outline:none}
+#latexInput:focus{border-color:var(--accent);background:var(--surface)}
+.latex-prev{margin-top:10px;min-height:56px;border:1px dashed var(--border-strong);border-radius:var(--r-md);padding:8px 12px;overflow:auto;display:flex;align-items:center}
+.latex-prev math-field{pointer-events:none;border:none!important;background:transparent!important;font-size:20px;color:var(--text)}
+#latexErr{min-height:18px;margin-top:6px;font-size:12px;color:var(--danger)}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
 
 /* ---------- Capture mode: only the clean document stays, page scrolls normally ---------- */
 html.cap,html.cap body{height:auto;overflow:visible}
 html.cap .app{display:block;height:auto}
-html.cap .topbar,html.cap .ribbon,html.cap .statusbar,html.cap #drawer,html.cap #drawerBackdrop,
-html.cap #toastNotification,html.cap #helpModal,html.cap #sheetUi,html.cap .doc-hint{display:none!important}
+html.cap #wsShell{display:block;position:static}
+html.cap .topbar,html.cap .ribbon,html.cap .statusbar,html.cap #drawer,html.cap #drawerBackdrop,html.cap .page-nav,
+html.cap #toastNotification,html.cap #helpModal,html.cap #latexModal,html.cap #sheetUi,html.cap .doc-hint{display:none!important}
 html.cap #workspace{overflow:visible;height:auto;padding:0;background:#fff}
 html.cap #pageSizer{width:auto!important;height:auto!important;max-width:none}
 html.cap #pageScaler{transform:none!important}
@@ -228,7 +257,8 @@ html.cap #documentArea math-field{color:#111!important;border-color:transparent!
 @media print{
   html,body{height:auto!important;overflow:visible!important;background:#fff!important}
   .app{display:block!important;height:auto!important}
-  .topbar,.ribbon,.statusbar,#drawer,#drawerBackdrop,#toastNotification,#helpModal,#sheetBg,#sheetUi,.doc-hint,.dropdown-panel{display:none!important}
+  #wsShell{display:block!important;position:static!important}
+  .topbar,.ribbon,.statusbar,#drawer,#drawerBackdrop,#toastNotification,#helpModal,#latexModal,#sheetBg,#sheetUi,.page-nav,.doc-hint,.dropdown-panel{display:none!important}
   #workspace{overflow:visible!important;padding:0!important;background:#fff!important;height:auto!important}
   #pageSizer{width:auto!important;height:auto!important;margin:0!important;max-width:none!important}
   #pageScaler{transform:none!important;width:auto!important}
@@ -240,7 +270,6 @@ html.cap #documentArea math-field{color:#111!important;border-color:transparent!
 
 @media (max-width:760px){
   .brand-title,.chip .chip-text,.btn .txt{display:none}
-  .btn-dark .txt{display:none}
   .sym-search{margin-left:0;width:100%}
   .zoom input[type=range]{width:70px}
 }
@@ -258,7 +287,6 @@ html.cap #documentArea math-field{color:#111!important;border-color:transparent!
     <button class="fmt" id="redoBtn" title="Redo (Ctrl+Y)"><span data-icon="redo" data-size="16"></span></button>
     <div class="spacer"></div>
     <span class="chip" id="saveChip"><span class="dot"></span><span class="chip-text" id="saveText">Saved</span></span>
-    <button class="icon-btn active" id="pinBtn" title="Keep window on top"><span data-icon="pin" data-size="17"></span></button>
     <button class="icon-btn" id="themeBtn" title="Dark / light mode"><span data-icon="moon" data-size="17"></span></button>
     <button class="icon-btn" id="helpBtn" title="Keyboard shortcuts"><span data-icon="help" data-size="17"></span></button>
     <div class="btn-split" style="margin-left:6px">
@@ -271,7 +299,7 @@ html.cap #documentArea math-field{color:#111!important;border-color:transparent!
   <nav class="ribbon no-focus-steal" id="ribbon">
     <div class="ribbon-tabs">
       <button class="tab active" data-tab="home">Home</button>
-      <button class="tab" data-tab="structures">Structures</button>
+      <button class="tab" data-tab="equation">Equation</button>
       <button class="tab" data-tab="symbols">Symbols</button>
       <button class="icon-btn" id="ribbonToggle" title="Collapse / expand ribbon"></button>
     </div>
@@ -298,40 +326,60 @@ html.cap #documentArea math-field{color:#111!important;border-color:transparent!
             <button class="fmt" data-cmd="insertUnorderedList" title="Bullet list"><span data-icon="list" data-size="16"></span></button>
           </div><div class="rgroup-label">Paragraph</div></div>
           <div class="rgroup"><div class="rgroup-items">
-            <button class="rbtn" id="copyLatexBtn" title="Copy equations as LaTeX (Ctrl+Shift+L)"><span class="ri" data-icon="code" data-size="22"></span><span class="rl">Copy LaTeX</span></button>
             <button class="rbtn" id="delEqBtn" title="Delete the selected equation"><span class="ri" data-icon="trash" data-size="22"></span><span class="rl">Delete Eq.</span></button>
             <button class="rbtn" id="clearBtn" title="Clear the whole document"><span class="ri" data-icon="x" data-size="22"></span><span class="rl">Clear</span></button>
           </div><div class="rgroup-label">Edit</div></div>
         </div>
       </div>
-      <div id="tabStructures" class="hidden"><div class="ribbon-scroll" id="structuresRow"></div></div>
+
+      <div id="tabEquation" class="hidden">
+        <div class="ribbon-scroll" id="equationRow">
+          <div class="rgroup"><div class="rgroup-items">
+            <button class="rbtn dd accent" id="galleryBtn" title="Built-in equations"><span class="ri"><span class="ico-text" style="font-size:20px">π</span></span><span class="rl">Equation</span></button>
+            <button class="rbtn" id="latexEditBtn" title="Edit this equation as LaTeX, or insert one from LaTeX"><span class="ri" data-icon="pen" data-size="22"></span><span class="rl">LaTeX…</span></button>
+          </div><div class="rgroup-label">Tools</div></div>
+          <div class="rgroup"><div class="rgroup-items">
+            <button class="rbtn" id="textBtn" title="Insert normal text inside an equation"><span class="ri"><span class="ico-text">ab</span></span><span class="rl">Text</span></button>
+            <button class="rbtn" id="copyLatexBtn" title="Copy equations as LaTeX (Ctrl+Shift+L)"><span class="ri" data-icon="code" data-size="22"></span><span class="rl">Copy LaTeX</span></button>
+            <button class="rbtn" id="copyMathmlBtn" title="Copy equations as MathML"><span class="ri"><span class="ico-text">&lt;/&gt;</span></span><span class="rl">Copy MathML</span></button>
+          </div><div class="rgroup-label">Conversions</div></div>
+        </div>
+      </div>
+
       <div id="tabSymbols" class="hidden">
         <div class="sym-toolbar" id="symChips"></div>
-        <div class="sym-toolbar" style="padding-top:0"><input class="sym-search" id="symSearch" placeholder="Search symbols (e.g. alpha, leq)"></div>
+        <div class="sym-toolbar" style="padding-top:0"><input class="sym-search" id="symSearch" placeholder="Search symbols (e.g. alpha, leq, integral)"></div>
         <div class="sym-grid" id="symGrid"></div>
       </div>
     </div>
   </nav>
 
   <!-- ===== Document area ===== -->
-  <div id="workspace">
-    <div id="pageSizer"><div id="pageScaler">
-      <main class="doc-wrap is-empty" id="docWrap">
-        <div id="sheetBg"></div>
-        <div id="documentArea" contenteditable="true" spellcheck="false"><p><br></p></div>
-        <div id="sheetUi"></div>
-        <div class="doc-hint">Start typing here…  Press <b>Ctrl+E</b> to insert an equation.</div>
-      </main>
-    </div></div>
+  <div id="wsShell">
+    <div id="workspace">
+      <div id="pageSizer"><div id="pageScaler">
+        <main class="doc-wrap is-empty" id="docWrap">
+          <div id="sheetBg"></div>
+          <div id="documentArea" contenteditable="true" spellcheck="false"><p><br></p></div>
+          <div id="sheetUi"></div>
+          <div class="doc-hint">Start typing here…  Press <b>Ctrl+E</b> to insert an equation.</div>
+        </main>
+      </div></div>
+    </div>
+    <div class="page-nav no-focus-steal" id="pageNav">
+      <button id="pgPrev" title="Previous page"><span data-icon="chevL" data-size="14"></span></button>
+      <span id="pageInd">Page <b>1</b> of <b>1</b></span>
+      <button id="pgNext" title="Next page"><span data-icon="chevR" data-size="14"></span></button>
+    </div>
   </div>
 
   <!-- ===== Status bar ===== -->
   <footer class="statusbar no-focus-steal">
-    <div class="sb-left"><span id="pageInd"></span><span id="stats"></span></div>
+    <div class="sb-left"><span id="stats"></span></div>
     <div class="sb-right">
       <div style="display:flex;gap:2px">
-        <button class="seg-ic" id="layoutPrintBtn" data-layout-set="print" title="Print Layout (pages)"><span data-icon="page" data-size="16"></span></button>
-        <button class="seg-ic" id="layoutWebBtn" data-layout-set="web" title="Web Layout (continuous)"><span data-icon="web" data-size="16"></span></button>
+        <button class="seg-ic" data-layout-set="print" title="Print Layout (pages)"><span data-icon="page" data-size="16"></span></button>
+        <button class="seg-ic" data-layout-set="web" title="Web Layout (continuous)"><span data-icon="web" data-size="16"></span></button>
       </div>
       <div class="zoom">
         <button id="zoomOut" title="Zoom out (Ctrl+-)">−</button>
@@ -376,15 +424,28 @@ html.cap #documentArea math-field{color:#111!important;border-color:transparent!
     <div class="d-row"><span>Page size</span>
       <div class="seg"><button data-size-set="A4">A4</button><button data-size-set="Letter">Letter</button></div></div>
     <div class="d-row"><span>Dark mode</span><button class="switch" id="themeSwitch" title="Dark mode"></button></div>
-    <div class="d-row"><span>Always on top</span><button class="switch on" id="pinSwitch" title="Always on top"></button></div>
 
     <div class="d-title">Help</div>
     <button class="d-item" data-act="help"><span data-icon="keyboard" data-size="18"></span>Keyboard shortcuts</button>
   </div>
-  <div class="drawer-foot">Equation Studio v1.1 · FarooqBuilds</div>
+  <div class="drawer-foot">Equation Studio v1.2 · FarooqBuilds</div>
 </aside>
 
 <div id="toastNotification"></div>
+
+<!-- ===== LaTeX editor ===== -->
+<div id="latexModal">
+  <div class="modal-card">
+    <h3 id="latexTitle">Edit as LaTeX</h3>
+    <textarea id="latexInput" spellcheck="false" placeholder="\frac{a}{b} + \sqrt{x}"></textarea>
+    <div class="latex-prev"><math-field id="latexPreview" read-only math-virtual-keyboard-policy="manual"></math-field></div>
+    <div id="latexErr"></div>
+    <div class="modal-actions">
+      <button class="btn" id="latexCancel">Cancel</button>
+      <button class="btn btn-dark" id="latexApply">Apply</button>
+    </div>
+  </div>
+</div>
 
 <div id="helpModal">
   <div class="modal-card">
@@ -398,7 +459,14 @@ html.cap #documentArea math-field{color:#111!important;border-color:transparent!
     <div class="kb-row"><span>Undo / Redo</span><kbd>Ctrl + Z</kbd> <kbd>Ctrl + Y</kbd></div>
     <div class="kb-row"><span>Zoom in / out / reset</span><kbd>Ctrl + =</kbd> <kbd>Ctrl + -</kbd> <kbd>Ctrl + 0</kbd></div>
     <div class="kb-row"><span>Close menus</span><kbd>Esc</kbd></div>
-    <p style="color:var(--muted);font-size:12.5px;margin:14px 0 0">Tip: click an equation to edit it. In an equation, Space moves the cursor out of a fraction or root.</p>
+    <h3 style="margin-top:16px">Typing inside an equation</h3>
+    <p style="color:var(--muted);font-size:12.5px;line-height:1.6;margin:0">
+      Type <kbd>/</kbd> for a fraction, <kbd>^</kbd> for a power, <kbd>_</kbd> for a subscript.
+      Words like <kbd>sqrt</kbd>, <kbd>pi</kbd>, <kbd>alpha</kbd>, <kbd>theta</kbd> turn into symbols, and
+      <kbd>&lt;=</kbd> <kbd>&gt;=</kbd> <kbd>!=</kbd> <kbd>-&gt;</kbd> become ≤ ≥ ≠ →.
+      You can also type <kbd>\</kbd> followed by any LaTeX command (for example <kbd>\sum</kbd>) and press Space.
+      Space moves the cursor out of a fraction or root.
+    </p>
   </div>
 </div>
 
@@ -416,13 +484,13 @@ const store = {
 const ICONS = {
   undo:'<path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/>',
   redo:'<path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 15-6.7L21 13"/>',
-  pin:'<line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-2l-2-2V6h1V4H6v2h1v7l-2 2z"/>',
   moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
   sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
   help:'<circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12" y2="17.01"/>',
   image:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>',
   plus:'<path d="M12 5v14M5 12h14"/>',
   code:'<path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/>',
+  pen:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
   trash:'<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>',
   x:'<path d="M18 6L6 18M6 6l12 12"/>',
   step:'<path d="M5 12h14M13 6l6 6-6 6"/>',
@@ -432,6 +500,8 @@ const ICONS = {
   alignR:'<path d="M3 6h18M9 12h12M3 18h18"/>',
   chev:'<path d="M6 9l6 6 6-6"/>',
   chevU:'<path d="M18 15l-6-6-6 6"/>',
+  chevL:'<path d="M15 18l-6-6 6-6"/>',
+  chevR:'<path d="M9 18l6-6-6-6"/>',
   menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',
   filePlus:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 11v6M9 14h6"/>',
   save:'<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',
@@ -453,6 +523,7 @@ const workspace = $('#workspace'), sizer = $('#pageSizer'), scaler = $('#pageSca
 const sheetBg = $('#sheetBg'), sheetUi = $('#sheetUi'), pgStyle = $('#pgStyle');
 let activeField = null;
 let savedRange = null;
+const ZW = '\u200B';   // invisible caret anchor (no visible space)
 
 /* ---------- toast ---------- */
 function showToast(message, type){
@@ -500,9 +571,10 @@ function saveNow(){ store.set('savedDocument', serialize()); setSave('saved'); }
 window.addEventListener('beforeunload', saveNow);
 
 /* ---------- stats and hint ---------- */
-function isEmpty(){ return !doc.querySelector('math-field') && !(doc.innerText || '').replace(/\u00A0/g, ' ').trim(); }
+function plainText(){ return (doc.innerText || '').replace(/\u200B/g, '').replace(/\u00A0/g, ' '); }
+function isEmpty(){ return !doc.querySelector('math-field') && !plainText().trim(); }
 function docCounts(){
-  const txt = (doc.innerText || '').replace(/\u00A0/g, ' ');
+  const txt = plainText();
   return {
     eq: $$('math-field', doc).length,
     words: txt.trim().split(/\s+/).filter(Boolean).length,
@@ -571,9 +643,13 @@ function placeAtCursor(node){
   doc.focus();
   range.deleteContents();
   range.insertNode(node);
-  const space = document.createTextNode('\u00A0');
-  node.after(space);
-  range.setStartAfter(space); range.collapse(true);
+  // Like Word: no automatic space. An invisible anchor is added only when nothing follows the
+  // equation, so the caret has somewhere to sit after it.
+  const nx = node.nextSibling;
+  if (!(nx && nx.nodeType === 3 && nx.data.length)){
+    node.after(document.createTextNode(ZW));
+  }
+  range.setStartAfter(node); range.collapse(true);
   sel.removeAllRanges(); sel.addRange(range);
 }
 function createEquation(latex){
@@ -599,7 +675,7 @@ function exitEquation(){
   if (!activeField || !doc.contains(activeField)) return;
   const mf = activeField, next = mf.nextSibling, r = document.createRange();
   mf.blur(); doc.focus();
-  if (next && next.nodeType === 3) r.setStart(next, Math.min(1, next.length)); else r.setStartAfter(mf);
+  if (next && next.nodeType === 3) r.setStart(next, next.data.charAt(0) === ZW ? 1 : 0); else r.setStartAfter(mf);
   r.collapse(true);
   const s = getSelection(); s.removeAllRanges(); s.addRange(r);
 }
@@ -611,15 +687,16 @@ doc.addEventListener('keydown', e => {
   if (!sel.rangeCount || !sel.isCollapsed) return;
   const r = sel.getRangeAt(0), c = r.startContainer, o = r.startOffset;
   let prev = null;
-  if (c.nodeType === 3){ if (o === 0) prev = c.previousSibling; else if (o === 1 && c.textContent[0] === '\u00A0' && c.previousSibling && c.previousSibling.tagName === 'MATH-FIELD'){ prev = c.previousSibling; } }
+  const SP = /^[\u00A0\u200B]$/, SP1 = /^[\u00A0\u200B]/;
+  if (c.nodeType === 3){ if (o === 0) prev = c.previousSibling; else if (o === 1 && SP1.test(c.textContent) && c.previousSibling && c.previousSibling.tagName === 'MATH-FIELD'){ prev = c.previousSibling; } }
   else if (o > 0) prev = c.childNodes[o - 1];
-  if (prev && prev.nodeType === 3 && prev.textContent === '\u00A0' && prev.previousSibling && prev.previousSibling.tagName === 'MATH-FIELD'){
+  if (prev && prev.nodeType === 3 && SP.test(prev.textContent) && prev.previousSibling && prev.previousSibling.tagName === 'MATH-FIELD'){
     e.preventDefault(); prev.previousSibling.remove(); prev.remove(); afterChange(true); return;
   }
   if (prev && prev.tagName === 'MATH-FIELD'){
     e.preventDefault();
     const sib = c.nodeType === 3 && o === 1 ? c : null;
-    prev.remove(); if (sib && sib.textContent === '\u00A0') sib.remove();
+    prev.remove(); if (sib && SP.test(sib.textContent)) sib.remove();
     afterChange(true);
   }
 });
@@ -659,7 +736,7 @@ $('#clearFmtBtn').addEventListener('click', () => fmt('removeFormat'));
 $('#undoBtn').addEventListener('click', undo);
 $('#redoBtn').addEventListener('click', redo);
 
-/* ---------- dropdown engine ---------- */
+/* ---------- dropdown engine (panels are built lazily on first open) ---------- */
 function closeAllDropdowns(){
   $$('.dropdown-panel.open').forEach(p => p.classList.remove('open'));
   $$('.is-active').forEach(b => { if (b.classList.contains('rbtn') || b.classList.contains('btn')) b.classList.remove('is-active'); });
@@ -682,9 +759,14 @@ function positionAndOpen(panel, btn){
   if (top + p.height > vh - m) top = Math.max(m, b.top - p.height - 6);
   panel.style.left = left + 'px'; panel.style.top = top + 'px';
 }
-function bindPanel(btn, panel){
-  document.body.appendChild(panel);
-  btn.addEventListener('click', e => { e.stopPropagation(); positionAndOpen(panel, btn); });
+function bindPanel(btn, panelOrFn){
+  let panel = (typeof panelOrFn === 'function') ? null : panelOrFn;
+  if (panel) document.body.appendChild(panel);
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    if (!panel){ panel = panelOrFn(); document.body.appendChild(panel); }
+    positionAndOpen(panel, btn);
+  });
 }
 function buildGridPanel(sections, cw){
   const panel = document.createElement('div');
@@ -693,12 +775,20 @@ function buildGridPanel(sections, cw){
     const t = document.createElement('div'); t.className = 'panel-title'; t.textContent = sec.title; panel.appendChild(t);
     const g = document.createElement('div'); g.className = 'panel-grid';
     g.style.gridTemplateColumns = `repeat(${sec.cols || 4}, ${cw}px)`;
-    sec.items.forEach(([latex, preview]) => {
-      const it = document.createElement('div'); it.className = 'dd-item';
+    sec.items.forEach(([latex, title, preview]) => {
+      const it = document.createElement('div');
+      it.className = 'dd-item' + (sec.labeled ? ' labeled' : '');
+      if (title) it.title = title;
+      if (sec.labeled && title){
+        const lb = document.createElement('div'); lb.className = 'dd-label'; lb.textContent = title; it.appendChild(lb);
+      }
       const pm = document.createElement('math-field');
       pm.setAttribute('read-only', 'true'); pm.setAttribute('math-virtual-keyboard-policy', 'manual');
       pm.value = preview; it.appendChild(pm);
-      it.addEventListener('click', () => { insertLatex(latex); closeAllDropdowns(); });
+      it.addEventListener('click', () => {
+        closeAllDropdowns();
+        if (sec.newEq) createEquation(latex); else insertLatex(latex);
+      });
       g.appendChild(it);
     });
     panel.appendChild(g);
@@ -708,8 +798,9 @@ function buildGridPanel(sections, cw){
 function ribbonDropdown(def){
   const btn = document.createElement('button');
   btn.className = 'rbtn dd';
+  btn.title = def.label;
   btn.innerHTML = `<span class="ri">${def.icon}</span><span class="rl">${def.label}</span>`;
-  bindPanel(btn, buildGridPanel(def.sections, def.cw || 72));
+  bindPanel(btn, () => buildGridPanel(def.sections, def.cw || 84));
   return btn;
 }
 function ribbonGroup(name, items){
@@ -721,73 +812,415 @@ function ribbonGroup(name, items){
   return g;
 }
 
-/* ---------- structures ---------- */
-const S = (title, cols, items) => ({ title, cols, items });
+/* ==========================================================
+   EQUATION DATA  (every item: [latex, tooltip, preview])
+   #@ = selected text / first slot,  #? = empty slot
+   ========================================================== */
+const P = s => s.replace(/#[@?]/g, '\\Box');
+const S = (title, cols, items, opts) => Object.assign({
+  title, cols,
+  items: items.map(x => typeof x === 'string' ? [x, '', P(x)] : [x[0], x[1] || '', x[2] || P(x[0])])
+}, opts || {});
+const grid = (r, c) => Array.from({ length:r }, () => Array(c).fill('#?').join('&')).join('\\\\');
+const mat = (env, r, c) => `\\begin{${env}}${grid(r, c)}\\end{${env}}`;
+const sized = (env, list) => list.map(([r, c]) => [mat(env, r, c), `${r}×${c} matrix`]);
+
 const GROUPS = [
  { name:'Structures', items:[
-  { label:'Fraction', icon:'<span class="ico-text">x⁄y</span>', cw:78, sections:[
-    S('Fraction',4,[["\\frac{#@}{#?}","\\frac{\\Box}{\\Box}"],["#@/#?","\\Box/\\Box"],["\\dfrac{#@}{#?}","\\dfrac{\\Box}{\\Box}"],["\\cfrac{#@}{#?}","\\cfrac{1}{2}"]]),
-    S('Common Fraction',4,[["\\dfrac{d#@}{d#?}","\\dfrac{dy}{dx}"],["\\dfrac{\\Delta #@}{\\Delta #?}","\\dfrac{\\Delta y}{\\Delta x}"],["\\dfrac{\\partial #@}{\\partial #?}","\\dfrac{\\partial y}{\\partial x}"],["\\dfrac{\\delta #@}{\\delta #?}","\\dfrac{\\delta y}{\\delta x}"],["\\dfrac{\\pi}{2}","\\dfrac{\\pi}{2}"]])]},
-  { label:'Script', icon:'e<sup style="font-size:11px">x</sup>', cw:72, sections:[
-    S('Script',4,[["#@^{#?}","x^{2}"],["#@_{#?}","x_{2}"],["#@_{#?}^{#?}","x_{2}^{3}"],["{}^{#?}_{#?}#@","{}^{2}_{1}x"]])]},
-  { label:'Radical', icon:'√x', cw:78, sections:[
-    S('Radicals',4,[["\\sqrt{#@}","\\sqrt{\\Box}"],["\\sqrt[#?]{#@}","\\sqrt[n]{\\Box}"],["\\sqrt[2]{#@}","\\sqrt[2]{\\Box}"],["\\sqrt[3]{#@}","\\sqrt[3]{\\Box}"]]),
-    S('Common Radicals',2,[["\\dfrac{-b\\pm\\sqrt{b^{2}-4ac}}{2a}","\\dfrac{-b\\pm\\sqrt{b^{2}-4ac}}{2a}"],["\\sqrt{a^{2}+b^{2}}","\\sqrt{a^{2}+b^{2}}"]])]},
-  { label:'Integral', icon:'∫', cw:84, sections:[
-    S('Integrals',4,[["\\int #?\\,d#?","\\int f\\,dx"],["\\int_{#?}^{#?}#?\\,d#?","\\int_{a}^{b}f\\,dx"],["\\iint #?\\,d#?","\\iint f\\,dA"],["\\iiint #?\\,d#?","\\iiint f\\,dV"],["\\oint #?\\,d#?","\\oint f\\,dx"]])]},
-  { label:'Large Operator', icon:'Σ', cw:84, sections:[
-    S('Large Operators',4,[["\\sum_{#?}^{#?}#?","\\sum_{i=0}^{n}"],["\\prod_{#?}^{#?}#?","\\prod_{i=0}^{n}"],["\\bigcup_{#?}^{#?}#?","\\bigcup_{i}^{n}"],["\\bigcap_{#?}^{#?}#?","\\bigcap_{i}^{n}"]])]},
-  { label:'Bracket', icon:'{( )}', cw:72, sections:[
-    S('Brackets',4,[["(#@)","(x)"],["[#@]","[x]"],["\\{#@\\}","\\{x\\}"],["|#@|","|x|"],["\\langle #@\\rangle","\\langle x\\rangle"],["\\lceil #@\\rceil","\\lceil x\\rceil"],["\\lfloor #@\\rfloor","\\lfloor x\\rfloor"],["\\left(#@\\right)","\\left(\\dfrac{a}{b}\\right)"]])]},
-  { label:'Function', icon:'sinθ', cw:84, sections:[
-    S('Functions',4,[["\\sin(#?)","\\sin(x)"],["\\cos(#?)","\\cos(x)"],["\\tan(#?)","\\tan(x)"],["\\csc(#?)","\\csc(x)"],["\\sec(#?)","\\sec(x)"],["\\cot(#?)","\\cot(x)"],["\\sin^{-1}(#?)","\\sin^{-1}(x)"],["\\log(#?)","\\log(x)"],["\\log_{#?}(#?)","\\log_{n}(x)"],["\\ln(#?)","\\ln(x)"],["\\exp(#?)","\\exp(x)"],["\\lim_{#?}","\\lim_{x \\to 0}"]])]},
-  { label:'Accent', icon:'ä', cw:72, sections:[
-    S('Accents',4,[["\\bar{#@}","\\bar{x}"],["\\vec{#@}","\\vec{x}"],["\\hat{#@}","\\hat{x}"],["\\dot{#@}","\\dot{x}"],["\\ddot{#@}","\\ddot{x}"],["\\tilde{#@}","\\tilde{x}"],["\\overline{#@}","\\overline{xyz}"],["\\underline{#@}","\\underline{xyz}"]])]},
-  { label:'Limit and Log', icon:'<span style="font-size:11px;line-height:1.1;text-align:center">lim<br>n→∞</span>', cw:90, sections:[
-    S('Limits and Logs',4,[["\\lim_{#? \\to #?}","\\lim_{x \\to 0}"],["\\lim_{#? \\to \\infty}","\\lim_{x \\to \\infty}"],["\\log_{#?}(#?)","\\log_{n}(x)"],["\\ln(#?)","\\ln(x)"],["\\log(#?)","\\log(x)"],["\\max_{#?}","\\max_{x}"],["\\min_{#?}","\\min_{x}"]])]},
-  { label:'Matrix', icon:'<span style="font-size:12px;line-height:1.1;text-align:center">[1 0<br>0 1]</span>', cw:110, sections:[
-    S('Matrices',2,[["\\begin{pmatrix}#?&#?\\\\#?&#?\\end{pmatrix}","\\begin{pmatrix}a&b\\\\c&d\\end{pmatrix}"],["\\begin{bmatrix}#?&#?\\\\#?&#?\\end{bmatrix}","\\begin{bmatrix}a&b\\\\c&d\\end{bmatrix}"],["\\begin{vmatrix}#?&#?\\\\#?&#?\\end{vmatrix}","\\begin{vmatrix}a&b\\\\c&d\\end{vmatrix}"],["\\begin{pmatrix}#?&#?&#?\\\\#?&#?&#?\\\\#?&#?&#?\\end{pmatrix}","\\begin{pmatrix}a&b&c\\\\d&e&f\\\\g&h&i\\end{pmatrix}"]])]}
+  { label:'Fraction', icon:'<span class="ico-text">x⁄y</span>', cw:84, sections:[
+    S('Fraction',4,[
+      ['\\frac{#@}{#?}','Stacked fraction'],
+      ['{}^{#@}\\!\\!/\\!{}_{#?}','Skewed fraction'],
+      ['#@/#?','Linear fraction'],
+      ['\\tfrac{#@}{#?}','Small fraction'],
+      ['\\dfrac{#@}{#?}','Display-style fraction'],
+      ['\\cfrac{#@}{#?}','Continued fraction']]),
+    S('Common Fractions',4,[
+      ['\\dfrac{d#@}{d#?}','Derivative','\\dfrac{dy}{dx}'],
+      ['\\dfrac{\\Delta #@}{\\Delta #?}','Change','\\dfrac{\\Delta y}{\\Delta x}'],
+      ['\\dfrac{\\partial #@}{\\partial #?}','Partial derivative','\\dfrac{\\partial y}{\\partial x}'],
+      ['\\dfrac{\\delta #@}{\\delta #?}','Variation','\\dfrac{\\delta y}{\\delta x}'],
+      ['\\dfrac{d^{2}#@}{d#?^{2}}','Second derivative','\\dfrac{d^{2}y}{dx^{2}}'],
+      ['\\dfrac{\\partial^{2}#@}{\\partial #?^{2}}','Second partial derivative','\\dfrac{\\partial^{2}y}{\\partial x^{2}}'],
+      ['\\dfrac{\\pi}{2}','π / 2'],
+      ['\\dfrac{1}{2}','One half']])]},
+
+  { label:'Script', icon:'e<sup style="font-size:11px">x</sup>', cw:80, sections:[
+    S('Script',4,[
+      ['#@^{#?}','Superscript'],
+      ['#@_{#?}','Subscript'],
+      ['#@_{#?}^{#?}','Subscript and superscript'],
+      ['{}_{#?}^{#?}#@','Left sub-superscript'],
+      ['{}^{#?}#@','Left superscript'],
+      ['{}_{#?}#@','Left subscript'],
+      ["#@'",'Prime'],
+      ["#@''",'Double prime']]),
+    S('Common Scripts',4,[
+      'e^{-i\\omega t}','x^{2}','x^{-1}','x_{i}','Y_{1}^{n}','a^{b^{c}}','x^{\\frac{1}{2}}','10^{-3}',
+      ['#@\\times10^{#?}','Scientific notation'],['{}^{n}C_{r}','Combination']])]},
+
+  { label:'Radical', icon:'√x', cw:84, sections:[
+    S('Radicals',4,[
+      ['\\sqrt{#@}','Square root'],
+      ['\\sqrt[#?]{#@}','Radical with degree'],
+      ['\\sqrt[2]{#@}','Square root with degree'],
+      ['\\sqrt[3]{#@}','Cube root'],
+      ['\\sqrt[4]{#@}','Fourth root']]),
+    S('Common Radicals',2,[
+      ['x=\\dfrac{-b\\pm\\sqrt{b^{2}-4ac}}{2a}','Quadratic formula'],
+      ['\\sqrt{a^{2}+b^{2}}','Hypotenuse'],
+      ['\\sqrt{\\dfrac{#@}{#?}}','Root of a fraction'],
+      ['\\sqrt[n]{a^{m}}','nth root of a power']])]},
+
+  { label:'Integral', icon:'∫', cw:96, sections:[
+    S('Integrals',3,[
+      ['\\int #?\\,d#?','Integral'],
+      ['\\iint #?\\,dA','Double integral'],
+      ['\\iiint #?\\,dV','Triple integral'],
+      ['\\oint #?\\,ds','Contour integral'],
+      ['\\oint_{S}#?\\,dS','Surface integral'],
+      ['\\iiint_{V}#?\\,dV','Volume integral']]),
+    S('With Limits',3,[
+      ['\\int_{#?}^{#?}#?\\,d#?','Definite integral'],
+      ['\\int\\limits_{#?}^{#?}#?\\,d#?','Limits above and below'],
+      ['\\iint_{#?}#?\\,dA','Double integral over a region'],
+      ['\\oint_{#?}#?\\,ds','Contour integral over a curve'],
+      ['\\int_{-\\infty}^{\\infty}#?\\,d#?','Improper (−∞ to ∞)'],
+      ['\\int_{0}^{\\infty}#?\\,d#?','Improper (0 to ∞)'],
+      ['\\left[#?\\right]_{#?}^{#?}','Evaluated between limits']]),
+    S('Common Integrals',2,[
+      ['\\int x^{n}\\,dx=\\dfrac{x^{n+1}}{n+1}+C','Power rule'],
+      ['\\int\\dfrac{1}{x}\\,dx=\\ln|x|+C','1/x'],
+      ['\\int e^{x}\\,dx=e^{x}+C','Exponential'],
+      ['\\int\\sin x\\,dx=-\\cos x+C','Sine'],
+      ['\\int\\cos x\\,dx=\\sin x+C','Cosine'],
+      ['\\int u\\,dv=uv-\\int v\\,du','Integration by parts'],
+      ['\\int_{a}^{b}f(x)\\,dx=F(b)-F(a)','Fundamental theorem'],
+      ['\\int_{-\\infty}^{\\infty}e^{-x^{2}}\\,dx=\\sqrt{\\pi}','Gaussian integral']])]},
+
+  { label:'Large Operator', icon:'Σ', cw:96, sections:[
+    S('Summation',3,[
+      ['\\sum_{#?}^{#?}#?','Summation with limits'],
+      ['\\sum\\nolimits_{#?}^{#?}#?','Limits beside the symbol'],
+      ['\\sum_{#?}#?','Summation, lower limit only'],
+      ['\\sum_{\\begin{matrix}#?\\\\#?\\end{matrix}}#?','Two conditions'],
+      ['\\sum #?','Summation, no limits']]),
+    S('Product and Coproduct',3,[
+      ['\\prod_{#?}^{#?}#?','Product with limits'],
+      ['\\prod\\nolimits_{#?}^{#?}#?','Limits beside the symbol'],
+      ['\\prod_{#?}#?','Product, lower limit only'],
+      ['\\coprod_{#?}^{#?}#?','Coproduct']]),
+    S('Union, Intersection and Others',3,[
+      ['\\bigcup_{#?}^{#?}#?','Union'],
+      ['\\bigcap_{#?}^{#?}#?','Intersection'],
+      ['\\bigvee_{#?}^{#?}#?','Logical OR'],
+      ['\\bigwedge_{#?}^{#?}#?','Logical AND'],
+      ['\\bigoplus_{#?}^{#?}#?','Direct sum'],
+      ['\\bigotimes_{#?}^{#?}#?','Tensor product']]),
+    S('Common',2,[
+      ['\\sum_{i=1}^{n}i=\\dfrac{n(n+1)}{2}','Sum of integers'],
+      ['\\sum_{i=1}^{n}i^{2}=\\dfrac{n(n+1)(2n+1)}{6}','Sum of squares'],
+      ['\\sum_{k=0}^{\\infty}\\dfrac{x^{k}}{k!}=e^{x}','Exponential series'],
+      ['\\sum_{k=0}^{n}\\binom{n}{k}a^{k}b^{n-k}','Binomial sum'],
+      ['\\prod_{i=1}^{n}i=n!','Factorial']])]},
+
+  { label:'Bracket', icon:'{( )}', cw:84, sections:[
+    S('Brackets (they grow with content)',4,[
+      ['\\left(#@\\right)','Parentheses'],
+      ['\\left[#@\\right]','Square brackets'],
+      ['\\left\\{#@\\right\\}','Braces'],
+      ['\\left\\langle #@\\right\\rangle','Angle brackets'],
+      ['\\left\\lfloor #@\\right\\rfloor','Floor'],
+      ['\\left\\lceil #@\\right\\rceil','Ceiling'],
+      ['\\left|#@\\right|','Absolute value'],
+      ['\\left\\|#@\\right\\|','Norm']]),
+    S('Intervals and Separators',4,[
+      ['\\left[#@,#?\\right]','Closed interval'],
+      ['\\left(#@,#?\\right)','Open interval'],
+      ['\\left[#@,#?\\right)','Half-open [a, b)'],
+      ['\\left(#@,#?\\right]','Half-open (a, b]'],
+      ['\\left\\{#@\\,\\middle|\\,#?\\right\\}','Set builder'],
+      ['\\left\\langle #@\\middle|#?\\right\\rangle','Bra-ket'],
+      ['\\left.#@\\right|_{#?}','Evaluated at'],
+      ['\\left.#@\\right|_{#?}^{#?}','Evaluated between']]),
+    S('Single Brackets',4,[
+      '(#@','#@)','[#@','#@]','\\{#@','#@\\}','\\langle #@','#@\\rangle'])]},
+
+  { label:'Function', icon:'sinθ', cw:90, sections:[
+    S('Trigonometric',4,['\\sin(#?)','\\cos(#?)','\\tan(#?)','\\csc(#?)','\\sec(#?)','\\cot(#?)']),
+    S('Trigonometric Powers',4,['\\sin^{2}(#?)','\\cos^{2}(#?)','\\tan^{2}(#?)','\\sin^{#?}(#?)']),
+    S('Inverse Trigonometric',4,['\\sin^{-1}(#?)','\\cos^{-1}(#?)','\\tan^{-1}(#?)','\\arcsin(#?)','\\arccos(#?)','\\arctan(#?)','\\operatorname{arccot}(#?)','\\operatorname{arcsec}(#?)']),
+    S('Hyperbolic',4,['\\sinh(#?)','\\cosh(#?)','\\tanh(#?)','\\coth(#?)','\\operatorname{sech}(#?)','\\operatorname{csch}(#?)','\\sinh^{-1}(#?)','\\operatorname{arsinh}(#?)']),
+    S('Logarithms and Exponentials',4,['\\log(#?)','\\ln(#?)','\\lg(#?)','\\log_{#?}(#?)','\\log_{10}(#?)','\\log_{2}(#?)','\\exp(#?)','e^{#?}']),
+    S('Other Functions',4,['\\det(#?)','\\dim(#?)','\\ker(#?)','\\gcd(#?)','\\operatorname{lcm}(#?)','\\arg(#?)','\\deg(#?)','\\Pr(#?)','\\operatorname{sgn}(#?)','#@\\bmod #?','\\pmod{#?}','\\operatorname{Re}(#?)','\\operatorname{Im}(#?)']),
+    S('Common',2,['\\sin\\theta','\\cos 2x','\\tan\\theta=\\dfrac{\\sin\\theta}{\\cos\\theta}','\\sin^{2}\\theta+\\cos^{2}\\theta=1'])]},
+
+  { label:'Accent', icon:'ä', cw:84, sections:[
+    S('Accents',4,[
+      ['\\dot{#@}','Dot'],['\\ddot{#@}','Double dot'],['\\dddot{#@}','Triple dot'],['\\hat{#@}','Hat'],
+      ['\\widehat{#@}','Wide hat'],['\\check{#@}','Check'],['\\acute{#@}','Acute'],['\\grave{#@}','Grave'],
+      ['\\breve{#@}','Breve'],['\\tilde{#@}','Tilde'],['\\widetilde{#@}','Wide tilde'],['\\bar{#@}','Bar'],
+      ['\\vec{#@}','Vector arrow'],['\\mathring{#@}','Ring']]),
+    S('Bars, Arrows and Braces',4,[
+      ['\\overline{#@}','Overbar'],['\\underline{#@}','Underbar'],
+      ['\\overrightarrow{#@}','Arrow over (right)'],['\\overleftarrow{#@}','Arrow over (left)'],
+      ['\\overleftrightarrow{#@}','Arrow over (both)'],
+      ['\\overbrace{#@}^{#?}','Overbrace'],['\\underbrace{#@}_{#?}','Underbrace']]),
+    S('Boxes and Strikes',4,[
+      ['\\boxed{#@}','Boxed formula'],['\\enclose{circle}{#@}','Circled'],['\\enclose{roundedbox}{#@}','Rounded box'],
+      ['\\cancel{#@}','Strike ╱'],['\\bcancel{#@}','Strike ╲'],['\\xcancel{#@}','Strike ╳'],['\\phantom{#@}','Invisible (keeps space)']])]},
+
+  { label:'Limit and Log', icon:'<span style="font-size:11px;line-height:1.1;text-align:center">lim<br>n→∞</span>', cw:96, sections:[
+    S('Limits',3,['\\lim_{#? \\to #?}','\\lim_{#? \\to \\infty}','\\lim_{#? \\to 0}','\\lim_{#? \\to #?^{+}}','\\lim_{#? \\to #?^{-}}','\\limsup_{#?}','\\liminf_{#?}']),
+    S('Min and Max',3,['\\max_{#?}','\\min_{#?}','\\sup_{#?}','\\inf_{#?}','\\max(#?,#?)','\\min(#?,#?)','\\arg\\max_{#?}','\\arg\\min_{#?}']),
+    S('Logarithms',4,['\\log(#?)','\\ln(#?)','\\log_{#?}(#?)','\\log_{10}(#?)']),
+    S('Common Limits',2,[
+      ['\\lim_{x\\to0}\\dfrac{\\sin x}{x}=1','Sine limit'],
+      ['\\lim_{n\\to\\infty}\\left(1+\\dfrac{1}{n}\\right)^{n}=e','Definition of e'],
+      ['\\lim_{x\\to a}\\dfrac{f(x)-f(a)}{x-a}','Derivative at a point'],
+      ['\\lim_{x\\to a}\\dfrac{f(x)}{g(x)}=\\lim_{x\\to a}\\dfrac{f\'(x)}{g\'(x)}',"L'Hôpital's rule"]])]},
+
+  { label:'Operator', icon:'<span class="ico-text">:=</span>', cw:96, sections:[
+    S('Operators',3,[
+      [':=','Colon equal'],['::=','Double colon equal'],['==','Equal equal'],['+=','Plus equal'],['-=','Minus equal'],
+      ['\\triangleq','Delta equal'],['\\overset{\\text{def}}{=}','Equal by definition'],['\\overset{#?}{=}','Equal with text above'],
+      ['\\underset{#?}{=}','Equal with text below']]),
+    S('Stretchy Arrows',2,[
+      ['\\xrightarrow[#?]{#?}','Right arrow with labels'],['\\xleftarrow[#?]{#?}','Left arrow with labels'],
+      ['\\xRightarrow[#?]{#?}','Implies with labels'],['\\xrightleftharpoons[#?]{#?}','Equilibrium with labels'],
+      ['\\overset{#?}{\\longrightarrow}','Long arrow, text above'],['\\underset{#?}{\\longrightarrow}','Long arrow, text below']])]},
+
+  { label:'Matrix', icon:'<span style="font-size:12px;line-height:1.1;text-align:center">[1 0<br>0 1]</span>', cw:104, sections:[
+    S('Empty Matrices',4,sized('pmatrix',[[1,2],[2,1],[1,3],[3,1],[2,2],[2,3],[3,2],[3,3],[4,4]])),
+    S('Brackets (2×2)',4,[
+      [mat('matrix',2,2),'No brackets'],[mat('bmatrix',2,2),'Square brackets'],[mat('Bmatrix',2,2),'Braces'],
+      [mat('vmatrix',2,2),'Determinant bars'],[mat('Vmatrix',2,2),'Double bars'],
+      [mat('bmatrix',3,3),'Square brackets 3×3'],[mat('vmatrix',3,3),'Determinant 3×3']]),
+    S('Identity and Special',4,[
+      ['\\begin{pmatrix}1&0\\\\0&1\\end{pmatrix}','Identity 2×2'],
+      ['\\begin{pmatrix}1&0&0\\\\0&1&0\\\\0&0&1\\end{pmatrix}','Identity 3×3'],
+      ['\\begin{bmatrix}1&0\\\\0&1\\end{bmatrix}','Identity 2×2 [ ]'],
+      ['\\begin{bmatrix}1&0&0\\\\0&1&0\\\\0&0&1\\end{bmatrix}','Identity 3×3 [ ]'],
+      ['\\begin{pmatrix}0&0\\\\0&0\\end{pmatrix}','Zero 2×2'],
+      ['\\begin{pmatrix}0&0&0\\\\0&0&0\\\\0&0&0\\end{pmatrix}','Zero 3×3'],
+      ['\\begin{pmatrix}#?&0&0\\\\0&#?&0\\\\0&0&#?\\end{pmatrix}','Diagonal 3×3'],
+      ['\\begin{pmatrix}#?&#?&#?\\\\0&#?&#?\\\\0&0&#?\\end{pmatrix}','Upper triangular 3×3']]),
+    S('With Dots',2,[
+      ['\\begin{pmatrix}a_{11}&\\cdots&a_{1n}\\\\\\vdots&\\ddots&\\vdots\\\\a_{m1}&\\cdots&a_{mn}\\end{pmatrix}','m × n matrix'],
+      ['\\begin{bmatrix}a_{11}&\\cdots&a_{1n}\\\\\\vdots&\\ddots&\\vdots\\\\a_{m1}&\\cdots&a_{mn}\\end{bmatrix}','m × n matrix [ ]'],
+      ['\\begin{pmatrix}a_{1}\\\\\\vdots\\\\a_{n}\\end{pmatrix}','Column vector'],
+      ['\\begin{pmatrix}a_{1}&\\cdots&a_{n}\\end{pmatrix}','Row vector'],
+      ['\\begin{pmatrix}1&\\cdots&0\\\\\\vdots&\\ddots&\\vdots\\\\0&\\cdots&1\\end{pmatrix}','Identity n × n'],
+      ['\\begin{pmatrix}a_{1}&&\\\\&\\ddots&\\\\&&a_{n}\\end{pmatrix}','Diagonal n × n']]),
+    S('Augmented Matrices',2,[
+      ['\\left[\\begin{array}{cc|c}#?&#?&#?\\\\#?&#?&#?\\end{array}\\right]','2 equations'],
+      ['\\left[\\begin{array}{ccc|c}#?&#?&#?&#?\\\\#?&#?&#?&#?\\\\#?&#?&#?&#?\\end{array}\\right]','3 equations']])]}
  ]},
+
  { name:'Layout', items:[
   { label:'Cases', icon:'<span style="font-size:22px">{</span>', cw:110, sections:[
-    S('Piecewise / Systems',2,[["\\begin{cases}#?&#?\\\\#?&#?\\end{cases}","\\begin{cases}a&b\\\\c&d\\end{cases}"],["\\begin{cases}#?&#?\\\\#?&#?\\\\#?&#?\\end{cases}","\\begin{cases}a&b\\\\c&d\\\\e&f\\end{cases}"]])]},
-  { label:'Aligned', icon:'<span style="font-size:15px;line-height:1.1;text-align:left">a=b<br>&nbsp;=c</span>', cw:110, sections:[
-    S('Step-by-step lines',2,[["\\begin{aligned}#?&=#?\\\\&=#?\\end{aligned}","\\begin{aligned}a&=b\\\\&=c\\end{aligned}"],["\\begin{aligned}#?&=#?\\\\&=#?\\\\&=#?\\end{aligned}","\\begin{aligned}a&=b\\\\&=c\\\\&=d\\end{aligned}"]])]},
-  { label:'Binomial', icon:'(ⁿₖ)', cw:90, sections:[
-    S('Binomial',2,[["\\binom{#@}{#?}","\\binom{n}{k}"],["\\dbinom{#@}{#?}","\\dbinom{n}{k}"]])]}
- ]},
- { name:'Formulas', items:[
-  { label:'Formulas', icon:'<span class="ico-text">f(x)</span>', cw:170, sections:[
-    S('Algebra and Geometry',2,[
-      ["x=\\dfrac{-b\\pm\\sqrt{b^{2}-4ac}}{2a}","x=\\dfrac{-b\\pm\\sqrt{b^{2}-4ac}}{2a}"],
-      ["a^{2}+b^{2}=c^{2}","a^{2}+b^{2}=c^{2}"],
-      ["m=\\dfrac{y_{2}-y_{1}}{x_{2}-x_{1}}","m=\\dfrac{y_{2}-y_{1}}{x_{2}-x_{1}}"],
-      ["d=\\sqrt{(x_{2}-x_{1})^{2}+(y_{2}-y_{1})^{2}}","d=\\sqrt{(x_{2}-x_{1})^{2}+(y_{2}-y_{1})^{2}}"],
-      ["A=\\pi r^{2}","A=\\pi r^{2}"],
-      ["|x|=\\begin{cases}x&x\\ge 0\\\\-x&x<0\\end{cases}","|x|=\\begin{cases}x&x\\ge 0\\\\-x&x<0\\end{cases}"]]),
-    S('Calculus and Others',2,[
-      ["f'(x)=\\lim_{h\\to 0}\\dfrac{f(x+h)-f(x)}{h}","f'(x)=\\lim_{h\\to 0}\\dfrac{f(x+h)-f(x)}{h}"],
-      ["\\sin^{2}\\theta+\\cos^{2}\\theta=1","\\sin^{2}\\theta+\\cos^{2}\\theta=1"],
-      ["A=P\\left(1+\\dfrac{r}{n}\\right)^{nt}","A=P\\left(1+\\dfrac{r}{n}\\right)^{nt}"],
-      ["e^{i\\pi}+1=0","e^{i\\pi}+1=0"]])]}
+    S('Piecewise / Cases',3,[
+      [mat('cases',2,2),'2 cases'],[mat('cases',3,2),'3 cases'],[mat('cases',4,2),'4 cases']]),
+    S('Systems of Equations',3,[
+      ['\\left\\{\\begin{array}{l}#?\\\\#?\\end{array}\\right.','2 equations'],
+      ['\\left\\{\\begin{array}{l}#?\\\\#?\\\\#?\\end{array}\\right.','3 equations'],
+      ['\\left\\{\\begin{array}{l}#?\\\\#?\\\\#?\\\\#?\\end{array}\\right.','4 equations']])]},
+  { label:'Aligned', icon:'<span style="font-size:15px;line-height:1.1;text-align:left">a=b<br>&nbsp;=c</span>', cw:120, sections:[
+    S('Step-by-step lines (aligned at =)',3,[
+      ['\\begin{aligned}#?&=#?\\\\&=#?\\end{aligned}','2 lines'],
+      ['\\begin{aligned}#?&=#?\\\\&=#?\\\\&=#?\\end{aligned}','3 lines'],
+      ['\\begin{aligned}#?&=#?\\\\&=#?\\\\&=#?\\\\&=#?\\end{aligned}','4 lines'],
+      ['\\begin{aligned}#?&<#?\\\\&<#?\\end{aligned}','Inequality chain']])]},
+  { label:'Binomial', icon:'(ⁿₖ)', cw:96, sections:[
+    S('Binomial',3,[
+      ['\\binom{#@}{#?}','Binomial coefficient'],['\\dbinom{#@}{#?}','Display binomial'],['\\tbinom{#@}{#?}','Small binomial'],
+      ['\\begin{matrix}#?\\\\#?\\end{matrix}','Stack (no brackets)']])]},
+  { label:'Style', icon:'<b style="font-family:serif;font-size:17px">A</b>', cw:90, sections:[
+    S('Font Style',4,[
+      ['\\mathbf{#@}','Bold','\\mathbf{Ab}'],['\\mathit{#@}','Italic','\\mathit{Ab}'],['\\mathrm{#@}','Roman (upright)','\\mathrm{Ab}'],
+      ['\\mathbb{#@}','Double-struck','\\mathbb{R}'],['\\mathcal{#@}','Calligraphic','\\mathcal{L}'],['\\mathfrak{#@}','Fraktur','\\mathfrak{g}'],
+      ['\\mathsf{#@}','Sans-serif','\\mathsf{Ab}'],['\\mathtt{#@}','Monospace','\\mathtt{Ab}'],
+      ['\\boldsymbol{#@}','Bold symbol (Greek)','\\boldsymbol{\\alpha}'],['\\operatorname{#?}','Operator name','\\operatorname{op}'],
+      ['\\text{#?}','Normal text','\\text{text}']])]},
+  { label:'Spacing', icon:'<span class="ico-text">␣</span>', cw:90, sections:[
+    S('Spacing',3,[
+      ['\\,','Thin space','\\text{thin}'],['\\:','Medium space','\\text{medium}'],['\\;','Thick space','\\text{thick}'],
+      ['\\quad','Quad space','\\text{quad}'],['\\qquad','Double quad space','\\text{qquad}'],['\\!','Negative thin space','\\text{neg.}']])]}
  ]}
 ];
-GROUPS.forEach(g => $('#structuresRow').appendChild(ribbonGroup(g.name, g.items)));
+
+/* ---- Built-in equation gallery (Word's list + a lot more for maths students) ---- */
+const G = (title, arr) => S(title, 1, arr.map(([n, l]) => [l, n]), { labeled:true, newEq:true });
+const GALLERY = [
+ G('Built-in',[
+  ['Area of Circle','A=\\pi r^{2}'],
+  ['Binomial Theorem','(x+a)^{n}=\\sum_{k=0}^{n}\\binom{n}{k}x^{k}a^{n-k}'],
+  ['Expansion of a Sum','(1+x)^{n}=1+\\frac{nx}{1!}+\\frac{n(n-1)x^{2}}{2!}+\\cdots'],
+  ['Fourier Series','f(x)=a_{0}+\\sum_{n=1}^{\\infty}\\left(a_{n}\\cos\\frac{n\\pi x}{L}+b_{n}\\sin\\frac{n\\pi x}{L}\\right)'],
+  ['Pythagorean Theorem','a^{2}+b^{2}=c^{2}'],
+  ['Quadratic Formula','x=\\frac{-b\\pm\\sqrt{b^{2}-4ac}}{2a}'],
+  ['Taylor Expansion','e^{x}=1+\\frac{x}{1!}+\\frac{x^{2}}{2!}+\\frac{x^{3}}{3!}+\\cdots'],
+  ['Trig Identity 1','\\sin\\alpha\\pm\\sin\\beta=2\\sin\\frac{1}{2}(\\alpha\\pm\\beta)\\cos\\frac{1}{2}(\\alpha\\mp\\beta)'],
+  ['Trig Identity 2','\\cos\\alpha+\\cos\\beta=2\\cos\\frac{1}{2}(\\alpha+\\beta)\\cos\\frac{1}{2}(\\alpha-\\beta)'],
+  ['Law of Cosines','c^{2}=a^{2}+b^{2}-2ab\\cos C']]),
+ G('Algebra',[
+  ['Difference of squares','a^{2}-b^{2}=(a-b)(a+b)'],
+  ['Square of a sum','(a+b)^{2}=a^{2}+2ab+b^{2}'],
+  ['Square of a difference','(a-b)^{2}=a^{2}-2ab+b^{2}'],
+  ['Cube of a sum','(a+b)^{3}=a^{3}+3a^{2}b+3ab^{2}+b^{3}'],
+  ['Sum of cubes','a^{3}+b^{3}=(a+b)(a^{2}-ab+b^{2})'],
+  ['Difference of cubes','a^{3}-b^{3}=(a-b)(a^{2}+ab+b^{2})'],
+  ['Slope','m=\\frac{y_{2}-y_{1}}{x_{2}-x_{1}}'],
+  ['Point-slope form','y-y_{1}=m(x-x_{1})'],
+  ['Distance formula','d=\\sqrt{(x_{2}-x_{1})^{2}+(y_{2}-y_{1})^{2}}'],
+  ['Midpoint','M=\\left(\\frac{x_{1}+x_{2}}{2},\\frac{y_{1}+y_{2}}{2}\\right)'],
+  ['Absolute value','|x|=\\begin{cases}x&x\\ge 0\\\\-x&x<0\\end{cases}'],
+  ['Exponents: product','a^{m}\\cdot a^{n}=a^{m+n}'],
+  ['Exponents: quotient','\\frac{a^{m}}{a^{n}}=a^{m-n}'],
+  ['Exponents: power','(a^{m})^{n}=a^{mn}'],
+  ['Logs: product','\\log_{a}(xy)=\\log_{a}x+\\log_{a}y'],
+  ['Logs: quotient','\\log_{a}\\frac{x}{y}=\\log_{a}x-\\log_{a}y'],
+  ['Logs: power','\\log_{a}x^{n}=n\\log_{a}x'],
+  ['Change of base','\\log_{b}a=\\frac{\\ln a}{\\ln b}'],
+  ['Arithmetic: nth term','a_{n}=a_{1}+(n-1)d'],
+  ['Arithmetic: sum','S_{n}=\\frac{n}{2}(a_{1}+a_{n})'],
+  ['Geometric: nth term','a_{n}=a_{1}r^{n-1}'],
+  ['Geometric: sum','S_{n}=a_{1}\\frac{1-r^{n}}{1-r}'],
+  ['Geometric: infinite sum','S=\\frac{a_{1}}{1-r},\\quad |r|<1'],
+  ['Compound interest','A=P\\left(1+\\frac{r}{n}\\right)^{nt}']]),
+ G('Geometry',[
+  ['Circumference','C=2\\pi r'],
+  ['Arc length','s=r\\theta'],
+  ['Sector area','A=\\frac{1}{2}r^{2}\\theta'],
+  ['Circle equation','(x-h)^{2}+(y-k)^{2}=r^{2}'],
+  ['Triangle area','A=\\frac{1}{2}bh'],
+  ["Heron's formula",'A=\\sqrt{s(s-a)(s-b)(s-c)}'],
+  ['Trapezoid area','A=\\frac{1}{2}(a+b)h'],
+  ['Law of Sines','\\frac{a}{\\sin A}=\\frac{b}{\\sin B}=\\frac{c}{\\sin C}'],
+  ['Cylinder volume','V=\\pi r^{2}h'],
+  ['Cylinder surface area','S=2\\pi r(r+h)'],
+  ['Cone volume','V=\\frac{1}{3}\\pi r^{2}h'],
+  ['Sphere volume','V=\\frac{4}{3}\\pi r^{3}'],
+  ['Sphere surface area','S=4\\pi r^{2}']]),
+ G('Trigonometry',[
+  ['Pythagorean identity','\\sin^{2}\\theta+\\cos^{2}\\theta=1'],
+  ['Tangent identity','1+\\tan^{2}\\theta=\\sec^{2}\\theta'],
+  ['Cotangent identity','1+\\cot^{2}\\theta=\\csc^{2}\\theta'],
+  ['Tangent as a ratio','\\tan\\theta=\\frac{\\sin\\theta}{\\cos\\theta}'],
+  ['Double angle: sine','\\sin 2\\theta=2\\sin\\theta\\cos\\theta'],
+  ['Double angle: cosine','\\cos 2\\theta=\\cos^{2}\\theta-\\sin^{2}\\theta'],
+  ['Double angle: tangent','\\tan 2\\theta=\\frac{2\\tan\\theta}{1-\\tan^{2}\\theta}'],
+  ['Sum: sine','\\sin(\\alpha\\pm\\beta)=\\sin\\alpha\\cos\\beta\\pm\\cos\\alpha\\sin\\beta'],
+  ['Sum: cosine','\\cos(\\alpha\\pm\\beta)=\\cos\\alpha\\cos\\beta\\mp\\sin\\alpha\\sin\\beta'],
+  ['Half angle: sine','\\sin^{2}\\frac{\\theta}{2}=\\frac{1-\\cos\\theta}{2}'],
+  ['Half angle: cosine','\\cos^{2}\\frac{\\theta}{2}=\\frac{1+\\cos\\theta}{2}'],
+  ["Euler's formula",'e^{i\\theta}=\\cos\\theta+i\\sin\\theta'],
+  ["De Moivre's theorem",'(\\cos\\theta+i\\sin\\theta)^{n}=\\cos n\\theta+i\\sin n\\theta'],
+  ["Euler's identity",'e^{i\\pi}+1=0']]),
+ G('Calculus',[
+  ['Definition of derivative','f\'(x)=\\lim_{h\\to0}\\frac{f(x+h)-f(x)}{h}'],
+  ['Power rule','\\frac{d}{dx}x^{n}=nx^{n-1}'],
+  ['Product rule','(fg)\'=f\'g+fg\''],
+  ['Quotient rule','\\left(\\frac{f}{g}\\right)\'=\\frac{f\'g-fg\'}{g^{2}}'],
+  ['Chain rule','\\frac{dy}{dx}=\\frac{dy}{du}\\cdot\\frac{du}{dx}'],
+  ['Derivative of sin','\\frac{d}{dx}\\sin x=\\cos x'],
+  ['Derivative of e^x','\\frac{d}{dx}e^{x}=e^{x}'],
+  ['Derivative of ln','\\frac{d}{dx}\\ln x=\\frac{1}{x}'],
+  ['Fundamental theorem','\\int_{a}^{b}f(x)\\,dx=F(b)-F(a)'],
+  ['Integration by parts','\\int u\\,dv=uv-\\int v\\,du'],
+  ["L'Hôpital's rule",'\\lim_{x\\to a}\\frac{f(x)}{g(x)}=\\lim_{x\\to a}\\frac{f\'(x)}{g\'(x)}'],
+  ['Taylor series','f(x)=\\sum_{n=0}^{\\infty}\\frac{f^{(n)}(a)}{n!}(x-a)^{n}'],
+  ['Maclaurin: e^x','e^{x}=\\sum_{n=0}^{\\infty}\\frac{x^{n}}{n!}'],
+  ['Maclaurin: sin','\\sin x=\\sum_{n=0}^{\\infty}\\frac{(-1)^{n}x^{2n+1}}{(2n+1)!}'],
+  ['Maclaurin: cos','\\cos x=\\sum_{n=0}^{\\infty}\\frac{(-1)^{n}x^{2n}}{(2n)!}'],
+  ['Gaussian integral','\\int_{-\\infty}^{\\infty}e^{-x^{2}}\\,dx=\\sqrt{\\pi}'],
+  ['Gradient','\\nabla f=\\left(\\frac{\\partial f}{\\partial x},\\frac{\\partial f}{\\partial y},\\frac{\\partial f}{\\partial z}\\right)'],
+  ['Divergence','\\nabla\\cdot\\mathbf{F}=\\frac{\\partial F_{x}}{\\partial x}+\\frac{\\partial F_{y}}{\\partial y}+\\frac{\\partial F_{z}}{\\partial z}'],
+  ['Laplacian','\\nabla^{2}f=\\frac{\\partial^{2}f}{\\partial x^{2}}+\\frac{\\partial^{2}f}{\\partial y^{2}}'],
+  ["Green's theorem",'\\oint_{C}(L\\,dx+M\\,dy)=\\iint_{D}\\left(\\frac{\\partial M}{\\partial x}-\\frac{\\partial L}{\\partial y}\\right)dA'],
+  ['Laplace transform','\\mathcal{L}\\{f(t)\\}=\\int_{0}^{\\infty}e^{-st}f(t)\\,dt'],
+  ['Fourier transform','\\hat{f}(\\xi)=\\int_{-\\infty}^{\\infty}f(x)e^{-2\\pi ix\\xi}\\,dx'],
+  ['First-order linear ODE','\\frac{dy}{dx}+P(x)y=Q(x)'],
+  ['Second-order linear ODE','a\\frac{d^{2}y}{dx^{2}}+b\\frac{dy}{dx}+cy=0']]),
+ G('Linear Algebra',[
+  ['Determinant 2×2','\\det\\begin{pmatrix}a&b\\\\c&d\\end{pmatrix}=ad-bc'],
+  ['Inverse 2×2','A^{-1}=\\frac{1}{ad-bc}\\begin{pmatrix}d&-b\\\\-c&a\\end{pmatrix}'],
+  ['Eigenvalue equation','A\\mathbf{v}=\\lambda\\mathbf{v}'],
+  ['Characteristic equation','\\det(A-\\lambda I)=0'],
+  ['Dot product','\\mathbf{a}\\cdot\\mathbf{b}=|\\mathbf{a}||\\mathbf{b}|\\cos\\theta'],
+  ['Cross product magnitude','|\\mathbf{a}\\times\\mathbf{b}|=|\\mathbf{a}||\\mathbf{b}|\\sin\\theta'],
+  ['Vector norm','\\|\\mathbf{v}\\|=\\sqrt{v_{1}^{2}+v_{2}^{2}+\\cdots+v_{n}^{2}}'],
+  ['Linear system','\\left\\{\\begin{array}{l}a_{1}x+b_{1}y=c_{1}\\\\a_{2}x+b_{2}y=c_{2}\\end{array}\\right.'],
+  ["Cramer's rule",'x=\\frac{\\det A_{x}}{\\det A}'],
+  ['Matrix product','(AB)_{ij}=\\sum_{k=1}^{n}a_{ik}b_{kj}'],
+  ['Rank-nullity theorem','\\dim V=\\operatorname{rank}(T)+\\operatorname{nullity}(T)']]),
+ G('Probability and Statistics',[
+  ['Mean','\\bar{x}=\\frac{1}{n}\\sum_{i=1}^{n}x_{i}'],
+  ['Variance','\\sigma^{2}=\\frac{1}{n}\\sum_{i=1}^{n}(x_{i}-\\mu)^{2}'],
+  ['Standard deviation','\\sigma=\\sqrt{\\frac{1}{n}\\sum_{i=1}^{n}(x_{i}-\\mu)^{2}}'],
+  ['Z-score','z=\\frac{x-\\mu}{\\sigma}'],
+  ['Normal distribution','f(x)=\\frac{1}{\\sigma\\sqrt{2\\pi}}e^{-\\frac{(x-\\mu)^{2}}{2\\sigma^{2}}}'],
+  ['Expected value','E[X]=\\sum_{i}x_{i}\\,p(x_{i})'],
+  ["Bayes' theorem",'P(A|B)=\\frac{P(B|A)\\,P(A)}{P(B)}'],
+  ['Binomial distribution','P(X=k)=\\binom{n}{k}p^{k}(1-p)^{n-k}'],
+  ['Permutations','{}^{n}P_{r}=\\frac{n!}{(n-r)!}'],
+  ['Combinations','\\binom{n}{r}=\\frac{n!}{r!(n-r)!}'],
+  ['Correlation','r=\\frac{\\sum(x_{i}-\\bar{x})(y_{i}-\\bar{y})}{\\sqrt{\\sum(x_{i}-\\bar{x})^{2}\\sum(y_{i}-\\bar{y})^{2}}}']]),
+ G('Physics',[
+  ["Newton's second law",'F=ma'],
+  ['Momentum','p=mv'],
+  ['Kinetic energy','E_{k}=\\frac{1}{2}mv^{2}'],
+  ['Potential energy','U=mgh'],
+  ['Work','W=Fd\\cos\\theta'],
+  ['Mass-energy equivalence','E=mc^{2}'],
+  ["Ohm's law",'V=IR'],
+  ['Electric power','P=VI'],
+  ["Newton's gravitation",'F=G\\frac{m_{1}m_{2}}{r^{2}}'],
+  ["Coulomb's law",'F=k\\frac{q_{1}q_{2}}{r^{2}}'],
+  ['Kinematics: velocity','v=u+at'],
+  ['Kinematics: displacement','s=ut+\\frac{1}{2}at^{2}'],
+  ['Kinematics: v squared','v^{2}=u^{2}+2as'],
+  ['Centripetal acceleration','a_{c}=\\frac{v^{2}}{r}'],
+  ['Pendulum period','T=2\\pi\\sqrt{\\frac{l}{g}}'],
+  ['Wave speed','v=f\\lambda'],
+  ['Photon energy','E=hf'],
+  ['de Broglie wavelength','\\lambda=\\frac{h}{p}'],
+  ['Ideal gas law','PV=nRT'],
+  ['Schrödinger equation','i\\hbar\\frac{\\partial}{\\partial t}\\Psi=\\hat{H}\\Psi']]),
+ G('Sets, Logic and Number Theory',[
+  ['De Morgan (union)','\\overline{A\\cup B}=\\overline{A}\\cap\\overline{B}'],
+  ['De Morgan (intersection)','\\overline{A\\cap B}=\\overline{A}\\cup\\overline{B}'],
+  ['Inclusion-exclusion','|A\\cup B|=|A|+|B|-|A\\cap B|'],
+  ['De Morgan (logic)','\\neg(p\\land q)\\equiv\\neg p\\lor\\neg q'],
+  ['Epsilon-delta limit','\\forall\\varepsilon>0\\,\\exists\\delta>0:\\;|x-a|<\\delta\\Rightarrow|f(x)-f(a)|<\\varepsilon'],
+  ['Congruence','a\\equiv b\\pmod{n}'],
+  ["Fermat's little theorem",'a^{p-1}\\equiv1\\pmod{p}'],
+  ['Division algorithm','a=bq+r,\\quad 0\\le r<b']])
+];
+
+GROUPS.forEach(g => $('#equationRow').appendChild(ribbonGroup(g.name, g.items)));
+bindPanel($('#galleryBtn'), () => buildGridPanel(GALLERY, 380));
 
 /* ---------- symbols tab ---------- */
+const AZ = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+const alpha = cmd => AZ.map(c => ['', `\\${cmd}{${c}}`]);
 const SYM = {
- Basic:[["±","\\pm"],["∓","\\mp"],["×","\\times"],["÷","\\div"],["⋅","\\cdot"],["=","="],["≠","\\ne"],["≈","\\approx"],["≡","\\equiv"],["∼","\\sim"],["≅","\\cong"],["∝","\\propto"],["<","<"],[">",">"],["≤","\\le"],["≥","\\ge"],["≪","\\ll"],["≫","\\gg"],["∞","\\infty"],["!","!"],["%","\\%"],["°","^\\circ"],["∂","\\partial"],["∇","\\nabla"],["Δ","\\Delta"],["√","\\sqrt{#?}"],["∛","\\sqrt[3]{#?}"],["∑","\\sum"],["∏","\\prod"],["∫","\\int"]],
- Greek:[["α","\\alpha"],["β","\\beta"],["γ","\\gamma"],["δ","\\delta"],["ε","\\varepsilon"],["ϵ","\\epsilon"],["ζ","\\zeta"],["η","\\eta"],["θ","\\theta"],["ϑ","\\vartheta"],["ι","\\iota"],["κ","\\kappa"],["λ","\\lambda"],["μ","\\mu"],["ν","\\nu"],["ξ","\\xi"],["π","\\pi"],["ρ","\\rho"],["σ","\\sigma"],["τ","\\tau"],["υ","\\upsilon"],["φ","\\varphi"],["ϕ","\\phi"],["χ","\\chi"],["ψ","\\psi"],["ω","\\omega"],["Γ","\\Gamma"],["Δ","\\Delta"],["Θ","\\Theta"],["Λ","\\Lambda"],["Ξ","\\Xi"],["Π","\\Pi"],["Σ","\\Sigma"],["Υ","\\Upsilon"],["Φ","\\Phi"],["Ψ","\\Psi"],["Ω","\\Omega"]],
- Arrows:[["←","\\leftarrow"],["→","\\rightarrow"],["↑","\\uparrow"],["↓","\\downarrow"],["↔","\\leftrightarrow"],["↕","\\updownarrow"],["⇐","\\Leftarrow"],["⇒","\\Rightarrow"],["⇑","\\Uparrow"],["⇓","\\Downarrow"],["⇔","\\Leftrightarrow"],["↦","\\mapsto"],["↩","\\hookleftarrow"],["↪","\\hookrightarrow"],["⇌","\\rightleftharpoons"],["↗","\\nearrow"],["↘","\\searrow"]],
- "Sets & Logic":[["∈","\\in"],["∉","\\notin"],["∋","\\ni"],["⊂","\\subset"],["⊆","\\subseteq"],["⊃","\\supset"],["⊇","\\supseteq"],["∪","\\cup"],["∩","\\cap"],["∅","\\emptyset"],["∧","\\land"],["∨","\\lor"],["¬","\\neg"],["∀","\\forall"],["∃","\\exists"],["∄","\\nexists"],["∴","\\therefore"],["∵","\\because"],["⊢","\\vdash"],["⊨","\\models"]],
- Letterlike:[["ℵ","\\aleph"],["ℏ","\\hbar"],["ℓ","\\ell"],["℘","\\wp"],["ℜ","\\Re"],["ℑ","\\Im"],["ℕ","\\mathbb{N}"],["ℤ","\\mathbb{Z}"],["ℚ","\\mathbb{Q}"],["ℝ","\\mathbb{R}"],["ℂ","\\mathbb{C}"],["∞","\\infty"],["∅","\\emptyset"]],
- Operators:[["+","+"],["−","-"],["×","\\times"],["÷","\\div"],["⋅","\\cdot"],["∗","\\ast"],["⊕","\\oplus"],["⊗","\\otimes"],["⊖","\\ominus"],["∘","\\circ"],["∙","\\bullet"],["∐","\\coprod"],["⋂","\\bigcap"],["⋃","\\bigcup"],["∮","\\oint"],["∬","\\iint"],["∭","\\iiint"]],
- Geometry:[["∠","\\angle"],["∡","\\measuredangle"],["⊥","\\perp"],["∥","\\parallel"],["△","\\triangle"],["□","\\square"],["◊","\\diamond"],["○","\\bigcirc"],["≅","\\cong"],["∼","\\sim"],["°","^\\circ"]],
- Negated:[["≠","\\ne"],["∉","\\notin"],["⊄","\\not\\subset"],["⊅","\\not\\supset"],["⊈","\\nsubseteq"],["⊉","\\nsupseteq"],["≁","\\nsim"],["≇","\\ncong"],["≉","\\not\\approx"],["≢","\\not\\equiv"],["⊀","\\nprec"],["⊁","\\nsucc"],["∤","\\nmid"],["∦","\\nparallel"]]
+ "Basic Math":[["±","\\pm"],["∓","\\mp"],["×","\\times"],["÷","\\div"],["⋅","\\cdot"],["∗","\\ast"],["=","="],["≠","\\ne"],["≈","\\approx"],["≡","\\equiv"],["∼","\\sim"],["≅","\\cong"],["∝","\\propto"],["<","<"],[">",">"],["≤","\\le"],["≥","\\ge"],["≪","\\ll"],["≫","\\gg"],["∞","\\infty"],["!","!"],["%","\\%"],["°","^\\circ"],["′","^{\\prime}"],["″","^{\\prime\\prime}"],["∂","\\partial"],["∇","\\nabla"],["Δ","\\Delta"],["√","\\sqrt{#?}"],["∛","\\sqrt[3]{#?}"],["∜","\\sqrt[4]{#?}"],["∑","\\sum"],["∏","\\prod"],["∫","\\int"],["∀","\\forall"],["∃","\\exists"],["∄","\\nexists"],["∁","\\complement"],["∴","\\therefore"],["∵","\\because"],["¬","\\neg"],["+","+"],["−","-"],["∅","\\emptyset"],["∈","\\in"],["∋","\\ni"],["∪","\\cup"],["∩","\\cap"],["←","\\leftarrow"],["→","\\rightarrow"],["↑","\\uparrow"],["↓","\\downarrow"],["↔","\\leftrightarrow"],["℃","^\\circ\\mathrm{C}"],["℉","^\\circ\\mathrm{F}"],["∣","\\mid"],["∥","\\parallel"]],
+ Greek:[["α","\\alpha"],["β","\\beta"],["γ","\\gamma"],["δ","\\delta"],["ε","\\varepsilon"],["ϵ","\\epsilon"],["ζ","\\zeta"],["η","\\eta"],["θ","\\theta"],["ϑ","\\vartheta"],["ι","\\iota"],["κ","\\kappa"],["ϰ","\\varkappa"],["λ","\\lambda"],["μ","\\mu"],["ν","\\nu"],["ξ","\\xi"],["π","\\pi"],["ϖ","\\varpi"],["ρ","\\rho"],["ϱ","\\varrho"],["σ","\\sigma"],["ς","\\varsigma"],["τ","\\tau"],["υ","\\upsilon"],["φ","\\varphi"],["ϕ","\\phi"],["χ","\\chi"],["ψ","\\psi"],["ω","\\omega"],["Γ","\\Gamma"],["Δ","\\Delta"],["Θ","\\Theta"],["Λ","\\Lambda"],["Ξ","\\Xi"],["Π","\\Pi"],["Σ","\\Sigma"],["Υ","\\Upsilon"],["Φ","\\Phi"],["Ψ","\\Psi"],["Ω","\\Omega"],["ϝ","\\digamma"]],
+ "Letter-like":[["ℵ","\\aleph"],["ℶ","\\beth"],["ℷ","\\gimel"],["ℸ","\\daleth"],["ℏ","\\hbar"],["ℓ","\\ell"],["℘","\\wp"],["ℜ","\\Re"],["ℑ","\\Im"],["ℕ","\\mathbb{N}"],["ℤ","\\mathbb{Z}"],["ℚ","\\mathbb{Q}"],["ℝ","\\mathbb{R}"],["ℂ","\\mathbb{C}"],["ℍ","\\mathbb{H}"],["ℙ","\\mathbb{P}"],["𝔼","\\mathbb{E}"],["∞","\\infty"],["∅","\\emptyset"],["℧","\\mho"],["ı","\\imath"],["ȷ","\\jmath"]],
+ Operators:[["+","+"],["−","-"],["±","\\pm"],["∓","\\mp"],["×","\\times"],["÷","\\div"],["⋅","\\cdot"],["∗","\\ast"],["⋆","\\star"],["∘","\\circ"],["∙","\\bullet"],["⊕","\\oplus"],["⊖","\\ominus"],["⊗","\\otimes"],["⊘","\\oslash"],["⊙","\\odot"],["∧","\\land"],["∨","\\lor"],["⊻","\\veebar"],["∐","\\coprod"],["⋂","\\bigcap"],["⋃","\\bigcup"],["⋁","\\bigvee"],["⋀","\\bigwedge"],["⨁","\\bigoplus"],["⨂","\\bigotimes"],["⨀","\\bigodot"],["∮","\\oint"],["∬","\\iint"],["∭","\\iiint"],["∖","\\setminus"],["⊎","\\uplus"],["⊔","\\sqcup"],["⊓","\\sqcap"],["†","\\dagger"],["‡","\\ddagger"],["⋄","\\diamond"],["≀","\\wr"],["⨿","\\amalg"]],
+ Arrows:[["←","\\leftarrow"],["→","\\rightarrow"],["↑","\\uparrow"],["↓","\\downarrow"],["↔","\\leftrightarrow"],["↕","\\updownarrow"],["⇐","\\Leftarrow"],["⇒","\\Rightarrow"],["⇑","\\Uparrow"],["⇓","\\Downarrow"],["⇔","\\Leftrightarrow"],["⇕","\\Updownarrow"],["⟵","\\longleftarrow"],["⟶","\\longrightarrow"],["⟷","\\longleftrightarrow"],["⟸","\\Longleftarrow"],["⟹","\\Longrightarrow"],["⟺","\\Longleftrightarrow"],["↦","\\mapsto"],["⟼","\\longmapsto"],["↩","\\hookleftarrow"],["↪","\\hookrightarrow"],["↼","\\leftharpoonup"],["⇀","\\rightharpoonup"],["↽","\\leftharpoondown"],["⇁","\\rightharpoondown"],["⇌","\\rightleftharpoons"],["⇋","\\leftrightharpoons"],["↗","\\nearrow"],["↘","\\searrow"],["↙","\\swarrow"],["↖","\\nwarrow"],["↺","\\circlearrowleft"],["↻","\\circlearrowright"],["⇝","\\rightsquigarrow"],["↠","\\twoheadrightarrow"],["↣","\\rightarrowtail"],["⇢","\\dashrightarrow"],["⇉","\\rightrightarrows"],["⇄","\\rightleftarrows"]],
+ Relations:[["=","="],["≠","\\ne"],["≈","\\approx"],["≃","\\simeq"],["≅","\\cong"],["≡","\\equiv"],["∼","\\sim"],["∝","\\propto"],["<","<"],[">",">"],["≤","\\le"],["≥","\\ge"],["≪","\\ll"],["≫","\\gg"],["≺","\\prec"],["≻","\\succ"],["⪯","\\preceq"],["⪰","\\succeq"],["≲","\\lesssim"],["≳","\\gtrsim"],["≍","\\asymp"],["≐","\\doteq"],["≜","\\triangleq"],["⊲","\\vartriangleleft"],["⊳","\\vartriangleright"],["⋈","\\bowtie"],["⌣","\\smile"],["⌢","\\frown"],["⊨","\\models"],["⊢","\\vdash"],["⊣","\\dashv"],["∣","\\mid"],["∥","\\parallel"],["⊥","\\perp"]],
+ "Sets & Logic":[["∈","\\in"],["∉","\\notin"],["∋","\\ni"],["⊂","\\subset"],["⊃","\\supset"],["⊆","\\subseteq"],["⊇","\\supseteq"],["⊊","\\subsetneq"],["⊋","\\supsetneq"],["⊏","\\sqsubset"],["⊑","\\sqsubseteq"],["∪","\\cup"],["∩","\\cap"],["∅","\\emptyset"],["∖","\\setminus"],["∧","\\land"],["∨","\\lor"],["¬","\\neg"],["∀","\\forall"],["∃","\\exists"],["∄","\\nexists"],["∴","\\therefore"],["∵","\\because"],["⊢","\\vdash"],["⊣","\\dashv"],["⊨","\\models"],["⊤","\\top"],["⊥","\\bot"],["∣","\\mid"],["∤","\\nmid"],["⇒","\\Rightarrow"],["⇔","\\Leftrightarrow"]],
+ Negated:[["≠","\\ne"],["≁","\\nsim"],["≇","\\ncong"],["≉","\\not\\approx"],["≢","\\not\\equiv"],["≮","\\nless"],["≯","\\ngtr"],["≰","\\nleq"],["≱","\\ngeq"],["⊀","\\nprec"],["⊁","\\nsucc"],["⊄","\\not\\subset"],["⊅","\\not\\supset"],["⊈","\\nsubseteq"],["⊉","\\nsupseteq"],["∉","\\notin"],["∤","\\nmid"],["∦","\\nparallel"],["⊬","\\nvdash"],["⊭","\\nvDash"]],
+ Geometry:[["∠","\\angle"],["∡","\\measuredangle"],["∢","\\sphericalangle"],["⊥","\\perp"],["∥","\\parallel"],["△","\\triangle"],["▽","\\triangledown"],["□","\\square"],["■","\\blacksquare"],["◊","\\lozenge"],["⋄","\\diamond"],["○","\\bigcirc"],["∘","\\circ"],["≅","\\cong"],["∼","\\sim"],["°","^\\circ"],["′","^{\\prime}"],["″","^{\\prime\\prime}"],["↗","\\nearrow"],["→","\\rightarrow"]],
+ Scripts:[...alpha('mathcal'), ...alpha('mathbb'), ...alpha('mathfrak')],
+ Delimiters:[["(","("],[")",")"],["[","["],["]","]"],["{","\\lbrace"],["}","\\rbrace"],["⟨","\\langle"],["⟩","\\rangle"],["⌊","\\lfloor"],["⌋","\\rfloor"],["⌈","\\lceil"],["⌉","\\rceil"],["|","\\vert"],["‖","\\Vert"],["⟦","\\llbracket"],["⟧","\\rrbracket"]],
+ Misc:[["⋯","\\cdots"],["…","\\ldots"],["⋮","\\vdots"],["⋱","\\ddots"],["∎","\\blacksquare"],["□","\\square"],["†","\\dagger"],["‡","\\ddagger"],["§","\\S"],["¶","\\P"],["ℏ","\\hbar"],["ℓ","\\ell"],["∂","\\partial"],["∇","\\nabla"],["♭","\\flat"],["♮","\\natural"],["♯","\\sharp"],["♠","\\spadesuit"],["♣","\\clubsuit"],["♡","\\heartsuit"],["♢","\\diamondsuit"],["∠","\\angle"],["√","\\surd"],["′","^{\\prime}"]]
 };
 let recent = [];
 try { recent = JSON.parse(store.get('recentSymbols') || '[]'); } catch(e){ recent = []; }
-let symCat = 'Basic';
+let symCat = 'Basic Math';
 function addRecent(s){
   recent = [s, ...recent.filter(r => r[1] !== s[1])].slice(0, 24);
   store.set('recentSymbols', JSON.stringify(recent));
@@ -811,14 +1244,20 @@ function renderSymbolGrid(){
       if (seen.has(s[1])) return;
       if (s[0] === q || s[1].toLowerCase().includes(q)){ seen.add(s[1]); list.push(s); }
     });
-  } else list = symCat === 'Recent' ? recent : SYM[symCat];
+  } else list = symCat === 'Recent' ? recent : (SYM[symCat] || []);
   const g = $('#symGrid'); g.innerHTML = '';
   if (!list.length){
     g.innerHTML = `<div class="sym-empty">${q ? 'No symbols found.' : 'Symbols you use will appear here.'}</div>`; return;
   }
   list.forEach(s => {
     const b = document.createElement('button');
-    b.className = 'sym'; b.textContent = s[0]; b.title = s[1];
+    b.className = 'sym'; b.title = s[1];
+    if (s[0]) b.textContent = s[0];
+    else {
+      const pm = document.createElement('math-field');
+      pm.setAttribute('read-only', 'true'); pm.setAttribute('math-virtual-keyboard-policy', 'manual');
+      pm.value = s[1]; b.appendChild(pm);
+    }
     b.addEventListener('click', () => { insertLatex(s[1]); addRecent(s); if (symCat === 'Recent') renderSymbolGrid(); });
     g.appendChild(b);
   });
@@ -837,7 +1276,7 @@ $$('.tab').forEach(t => t.addEventListener('click', () => {
   if ($('#ribbon').classList.contains('collapsed')) setRibbonCollapsed(false);
   $$('.tab').forEach(x => x.classList.toggle('active', x === t));
   $('#tabHome').classList.toggle('hidden', t.dataset.tab !== 'home');
-  $('#tabStructures').classList.toggle('hidden', t.dataset.tab !== 'structures');
+  $('#tabEquation').classList.toggle('hidden', t.dataset.tab !== 'equation');
   $('#tabSymbols').classList.toggle('hidden', t.dataset.tab !== 'symbols');
   closeAllDropdowns();
 }));
@@ -892,6 +1331,15 @@ function copyLatex(){
   if (copyText(parts.join('\n'))) showToast(`${parts.length} equation${parts.length > 1 ? 's' : ''} copied as LaTeX`);
   else showToast('Error: could not copy LaTeX');
 }
+function copyMathml(){
+  const fields = $$('math-field', doc);
+  if (!fields.length) return showToast('No equations to copy', 'warn');
+  const parts = [];
+  fields.forEach(m => { try { const v = m.getValue('math-ml'); if (v) parts.push(v); } catch(e){} });
+  if (!parts.length) return showToast('Error: MathML is not available', 'error');
+  if (copyText(parts.join('\n'))) showToast(`${parts.length} equation${parts.length > 1 ? 's' : ''} copied as MathML`);
+  else showToast('Error: could not copy MathML');
+}
 function clearDoc(){
   if (isEmpty()) return showToast('Document is already empty', 'warn');
   clearTimeout(hTimer); pushHistory();
@@ -930,9 +1378,53 @@ function requestExport(kind){
 $('#insertEquationBtn').addEventListener('click', () => createEquation(''));
 $('#nextStepBtn').addEventListener('click', nextStep);
 $('#copyLatexBtn').addEventListener('click', copyLatex);
+$('#copyMathmlBtn').addEventListener('click', copyMathml);
+$('#textBtn').addEventListener('click', () => insertLatex('\\text{#?}'));
 $('#delEqBtn').addEventListener('click', deleteActiveEquation);
 $('#clearBtn').addEventListener('click', clearDoc);
 $('#screenshotBtn').addEventListener('click', () => takeScreenshot('clipboard'));
+
+/* ---------- LaTeX editor ---------- */
+let latexTarget = null;
+function openLatexModal(){
+  const ae = document.activeElement;
+  latexTarget = (ae && ae.tagName === 'MATH-FIELD' && doc.contains(ae)) ? ae : null;
+  let current = '';
+  if (latexTarget){ try { current = latexTarget.getValue('latex'); } catch(e){} }
+  $('#latexTitle').textContent = latexTarget ? 'Edit equation as LaTeX' : 'Insert equation from LaTeX';
+  $('#latexApply').textContent = latexTarget ? 'Apply' : 'Insert';
+  $('#latexInput').value = current;
+  updateLatexPreview();
+  $('#latexModal').classList.add('open');
+  setTimeout(() => { const t = $('#latexInput'); t.focus(); t.setSelectionRange(t.value.length, t.value.length); }, 30);
+}
+function closeLatexModal(){ $('#latexModal').classList.remove('open'); }
+function updateLatexPreview(){
+  const v = $('#latexInput').value;
+  try { $('#latexPreview').value = v; } catch(e){}
+  let msg = '';
+  const ML = window.MathLive;
+  if (v.trim() && ML && typeof ML.validateLatex === 'function'){
+    try { const errs = ML.validateLatex(v); if (errs && errs.length) msg = 'Check the LaTeX: ' + (errs[0].code || 'syntax problem'); } catch(e){}
+  }
+  $('#latexErr').textContent = msg;
+}
+function applyLatex(){
+  const v = $('#latexInput').value.trim();
+  if (!v){ showToast('Type some LaTeX first', 'warn'); return; }
+  closeLatexModal();
+  if (latexTarget && doc.contains(latexTarget)){
+    latexTarget.value = v; latexTarget.focus(); afterChange(true);
+  } else {
+    createEquation(v);
+  }
+}
+$('#latexEditBtn').addEventListener('click', openLatexModal);
+$('#latexInput').addEventListener('input', updateLatexPreview);
+$('#latexCancel').addEventListener('click', closeLatexModal);
+$('#latexApply').addEventListener('click', applyLatex);
+$('#latexModal').addEventListener('click', e => { if (e.target.id === 'latexModal') closeLatexModal(); });
+$('#latexInput').addEventListener('keydown', e => { if (e.ctrlKey && e.key === 'Enter'){ e.preventDefault(); applyLatex(); } });
 
 /* ---------- theme, zoom ---------- */
 function applyTheme(t){
@@ -963,7 +1455,8 @@ const PAGE_DEF = { A4:{ w:794, h:1123 }, Letter:{ w:816, h:1056 } };   // CSS px
 const PAGE_M = 72, PAGE_GAP = 24;                                     // 1 inch margins, gap between pages
 let layout = store.get('layoutMode') === 'web' ? 'web' : 'print';
 let pageSize = store.get('pageSize') === 'Letter' ? 'Letter' : 'A4';
-let pageCount = 1, pagesHeight = 0, sheetKey = '';
+let pageCount = 1, pagesHeight = 0, sheetKey = '', curPage = 1;
+let kidPage = [];   // page index (0-based) of every top-level block, filled by paginate()
 
 function geo(){ const p = PAGE_DEF[pageSize]; return { W:p.w, H:p.h, S:p.h + PAGE_GAP, CH:p.h - PAGE_M * 2 }; }
 
@@ -985,7 +1478,7 @@ function applyScale(){
 function paginate(){
   if (layout !== 'print'){
     pgStyle.textContent = ''; doc.style.height = '';
-    pageCount = 1; pagesHeight = 0; sheetKey = '';
+    pageCount = 1; pagesHeight = 0; sheetKey = ''; kidPage = [];
     applyScale(); updatePageIndicator();
     return;
   }
@@ -993,6 +1486,7 @@ function paginate(){
   pgStyle.textContent = '';                       // measure natural layout first
   const kids = [...doc.children];
   const rules = [];
+  kidPage = [];
   let shift = 0, prevBottom = PAGE_M, maxBottom = PAGE_M;
   kids.forEach((el, i) => {
     const h = el.offsetHeight;
@@ -1006,6 +1500,7 @@ function paginate(){
       shift += newTop - top;
       top = newTop;
     }
+    kidPage[i] = Math.floor(top / g.S);
     prevBottom = top + h;
     if (prevBottom > maxBottom) maxBottom = prevBottom;
   });
@@ -1043,25 +1538,53 @@ function buildSheets(g){
     t.dataset.page = String(i + 1);
     t.style.top = (i * g.S + 10) + 'px';
     t.innerHTML = `<span class="pg-num">Page ${i + 1}</span>` +
-      `<button class="pt-btn" data-act="clipboard" title="Copy page ${i + 1} as image">${icon('copy', 15)}</button>` +
-      `<button class="pt-btn" data-act="save" title="Save page ${i + 1} as PNG">${icon('save', 15)}</button>`;
+      `<button class="pt-btn" data-act="clipboard" title="Copy page ${i + 1} as image">${icon('copy', 14)}</button>` +
+      `<button class="pt-btn" data-act="save" title="Save page ${i + 1} as PNG">${icon('save', 14)}</button>` +
+      `<button class="pt-btn danger" data-act="delete" title="Delete page ${i + 1}">${icon('trash', 14)}</button>`;
     sheetUi.appendChild(t);
   }
 }
 sheetUi.addEventListener('click', e => {
   const b = e.target.closest('.pt-btn');
   if (!b) return;
-  takeScreenshot(b.dataset.act, parseInt(b.closest('.sheet-tools').dataset.page, 10));
+  const n = parseInt(b.closest('.sheet-tools').dataset.page, 10);
+  if (b.dataset.act === 'delete') deletePage(n);
+  else takeScreenshot(b.dataset.act, n);
 });
 
+/* Delete every block that sits on page n (Ctrl+Z brings it back) */
+function deletePage(n){
+  if (layout !== 'print') return;
+  paginate();                                    // make sure kidPage is fresh
+  const kids = [...doc.children];
+  const victims = kids.filter((k, i) => kidPage[i] === n - 1);
+  if (!victims.length) return showToast(`Page ${n} is already empty`, 'warn');
+  clearTimeout(hTimer); pushHistory();
+  victims.forEach(k => k.remove());
+  if (!doc.children.length) doc.innerHTML = '<p><br></p>';
+  afterChange(true); pushHistory();
+  showToast(`Page ${n} deleted. Press Ctrl+Z to undo`, 'warn');
+}
+
+/* page indicator + navigator (bottom-right) */
 function updatePageIndicator(){
   const el = $('#pageInd');
   if (layout !== 'print'){ el.innerHTML = ''; return; }
   const g = geo(), s = docSize / 18;
   const y = (workspace.scrollTop + workspace.clientHeight / 2 - sizer.offsetTop) / s;
   const cur = Math.max(1, Math.min(pageCount, Math.floor(y / g.S) + 1));
+  curPage = cur;
   el.innerHTML = `Page <b>${cur}</b> of <b>${pageCount}</b>`;
+  $('#pgPrev').disabled = cur <= 1;
+  $('#pgNext').disabled = cur >= pageCount;
 }
+function goToPage(n){
+  const g = geo(), s = docSize / 18;
+  n = Math.max(1, Math.min(pageCount, n));
+  workspace.scrollTo({ top: Math.max(0, sizer.offsetTop + (n - 1) * g.S * s - 16), behavior:'smooth' });
+}
+$('#pgPrev').addEventListener('click', () => goToPage(curPage - 1));
+$('#pgNext').addEventListener('click', () => goToPage(curPage + 1));
 let scrollRaf = 0;
 workspace.addEventListener('scroll', () => {
   if (scrollRaf) return;
@@ -1110,12 +1633,11 @@ const DRAWER_ACTIONS = {
   help:    () => $('#helpModal').classList.add('open')
 };
 $$('.d-item[data-act]').forEach(b => b.addEventListener('click', () => { closeDrawer(); DRAWER_ACTIONS[b.dataset.act](); }));
-$('#pinSwitch').addEventListener('click', () => { window.pyPinTrigger = true; });
 
 /* ---------- Python integration ---------- */
 let savedScroll = { top:0, left:0 };
 window.prepareForCapture = function(){
-  closeAllDropdowns(); closeDrawer();
+  closeAllDropdowns(); closeDrawer(); closeLatexModal();
   savedScroll = { top: workspace.scrollTop, left: workspace.scrollLeft };
   root.classList.add('cap');
   $$('math-field', doc).forEach(m => m.classList.remove('is-focused'));
@@ -1163,12 +1685,6 @@ window.getCaptureInfo = function(target){
   return JSON.stringify({ segments:[{ x:dr.left, y:top, w:dr.width, h:Math.ceil(dr.height) }], breaks });
 };
 
-$('#pinBtn').addEventListener('click', () => { window.pyPinTrigger = true; });
-window.setPinned = function(on){
-  $('#pinBtn').classList.toggle('active', !!on);
-  $('#pinSwitch').classList.toggle('on', !!on);
-};
-
 /* ---------- help ---------- */
 $('#helpBtn').addEventListener('click', () => $('#helpModal').classList.add('open'));
 $('#helpModal').addEventListener('click', e => { if (e.target.id === 'helpModal') $('#helpModal').classList.remove('open'); });
@@ -1176,7 +1692,8 @@ $('#helpModal').addEventListener('click', e => { if (e.target.id === 'helpModal'
 /* ---------- keyboard shortcuts ---------- */
 document.addEventListener('keydown', e => {
   const ctrl = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
-  if (e.key === 'Escape'){ closeAllDropdowns(); closeDrawer(); $('#helpModal').classList.remove('open'); return; }
+  if (e.key === 'Escape'){ closeAllDropdowns(); closeDrawer(); closeLatexModal(); $('#helpModal').classList.remove('open'); return; }
+  if ($('#latexModal').classList.contains('open')) return;     // typing in the LaTeX box
   if (ctrl && !e.shiftKey && k === 'e'){ e.preventDefault(); createEquation(''); return; }
   if (ctrl && e.shiftKey && k === 'c'){ e.preventDefault(); takeScreenshot(); return; }
   if (ctrl && e.shiftKey && k === 'l'){ e.preventDefault(); copyLatex(); return; }
@@ -1191,6 +1708,24 @@ document.addEventListener('keydown', e => {
   else if (ctrl && (k === 'y' || (k === 'z' && e.shiftKey))){ e.preventDefault(); redo(); }
 });
 
+/* ---------- self-check: logs any menu LaTeX that MathLive cannot parse ---------- */
+function validateMenus(){
+  const ML = window.MathLive;
+  if (!ML || typeof ML.validateLatex !== 'function'){ console.log('LATEX-CHECK skipped (validator not available)'); return; }
+  const all = [];
+  GROUPS.forEach(g => g.items.forEach(d => d.sections.forEach(s => s.items.forEach(i => all.push(i[0])))));
+  GALLERY.forEach(s => s.items.forEach(i => all.push(i[0])));
+  Object.values(SYM).flat().forEach(s => all.push(s[1]));
+  const bad = [];
+  all.forEach(l => {
+    try {
+      const errs = ML.validateLatex(P(l));
+      if (errs && errs.length) bad.push(l + '  =>  ' + (errs[0].code || errs[0].message || 'error'));
+    } catch(e){}
+  });
+  console.log('LATEX-CHECK: ' + (bad.length ? bad.length + ' problem(s): ' + bad.slice(0, 30).join(' | ') : 'all ' + all.length + ' menu items are valid'));
+}
+
 /* ---------- init ---------- */
 applyTheme(store.get('theme') || 'light');
 setRibbonCollapsed(store.get('ribbonCollapsed') === '1');
@@ -1203,6 +1738,7 @@ schedulePaginate();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(schedulePaginate);
 window.addEventListener('load', schedulePaginate);
 setTimeout(() => { pushHistory(); schedulePaginate(); }, 500);
+setTimeout(validateMenus, 2500);
 console.log('Equation Studio ready');
 </script>
 </body>

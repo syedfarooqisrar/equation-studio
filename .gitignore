@@ -23,3 +23,5 @@ dist/
 
 # Release zips
 *.zip
+
+settings.ini 
