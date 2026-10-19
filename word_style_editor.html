@@ -620,8 +620,46 @@ function afterChange(snapshot = true){ updateStats(); scheduleSave(); schedulePa
 doc.addEventListener('input', () => afterChange(true));
 
 /* ---------- equations ---------- */
+function mathFieldFocusState(mf, label){
+  try {
+    const sink = mf.shadowRoot && mf.shadowRoot.querySelector('.ML__keyboard-sink');
+    const shadowActive = mf.shadowRoot && mf.shadowRoot.activeElement;
+    console.log('FOCUS-DIAG ' + JSON.stringify({
+      label,
+      value: mf.getValue('latex'),
+      selection: mf.selection && mf.selection.ranges,
+      activeTag: document.activeElement && document.activeElement.tagName,
+      activeId: document.activeElement && document.activeElement.id,
+      focusWithin: mf.matches(':focus-within'),
+      hasFocus: typeof mf.hasFocus === 'function' ? mf.hasFocus() : 'n/a',
+      shadowActive: shadowActive ? shadowActive.tagName + '.' + shadowActive.className : 'none',
+      sink: !!sink,
+      sinkFocused: !!(sink && shadowActive === sink)
+    }));
+  } catch(e){
+    console.log('FOCUS-DIAG failed: ' + e.message);
+  }
+}
+function mathFieldEventDiag(mf, where, e){
+  console.log('KEY-DIAG ' + JSON.stringify({
+    where,
+    type: e.type,
+    key: e.key || '',
+    code: e.code || '',
+    inputType: e.inputType || '',
+    data: e.data || '',
+    defaultPrevented: e.defaultPrevented,
+    target: e.target && e.target.tagName,
+    activeTag: document.activeElement && document.activeElement.tagName
+  }));
+}
 function setupMathField(mf){
   mf.setAttribute('math-virtual-keyboard-policy', 'manual');
+  ['keydown', 'beforeinput', 'input'].forEach(type => {
+    mf.addEventListener(type, e => mathFieldEventDiag(mf, 'host', e), true);
+    const sink = mf.shadowRoot && mf.shadowRoot.querySelector('.ML__keyboard-sink');
+    if (sink) sink.addEventListener(type, e => mathFieldEventDiag(mf, 'sink', e), true);
+  });
   /* "armed" accent: wait for the first character, then put the accent on it */
   mf.addEventListener('input', () => {
     let now = '';
@@ -643,8 +681,13 @@ function setupMathField(mf){
     mf._arming = false;
     afterChange(true);
   });
-  mf.addEventListener('focusin', () => { activeField = mf; mf.classList.add('is-focused'); });
+  mf.addEventListener('focusin', () => {
+    activeField = mf;
+    mf.classList.add('is-focused');
+    mathFieldFocusState(mf, 'focusin');
+  });
   mf.addEventListener('focusout', () => {
+    mathFieldFocusState(mf, 'focusout');
     setTimeout(() => {
       if (document.activeElement === mf) return;
       mf.classList.remove('is-focused');
@@ -772,6 +815,7 @@ function insertIntoField(mf, latex){
     arm();
   }
   try { console.log('AFTER ' + mf.getValue('latex') + ' | selection ' + JSON.stringify(mf.selection && mf.selection.ranges)); } catch(e){}
+  mathFieldFocusState(mf, 'after-insert');
 }
 
 function createEquation(latex){
