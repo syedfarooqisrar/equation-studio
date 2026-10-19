@@ -622,6 +622,7 @@ doc.addEventListener('input', () => afterChange(true));
 /* ---------- equations ---------- */
 function mathFieldFocusState(mf, label){
   try {
+       if (!window.EQ_DEBUG) return;
     const sink = mf.shadowRoot && mf.shadowRoot.querySelector('.ML__keyboard-sink');
     const shadowActive = mf.shadowRoot && mf.shadowRoot.activeElement;
     console.log('FOCUS-DIAG ' + JSON.stringify({
@@ -641,6 +642,7 @@ function mathFieldFocusState(mf, label){
   }
 }
 function mathFieldEventDiag(mf, where, e){
+  if (!window.EQ_DEBUG) return;
   console.log('KEY-DIAG ' + JSON.stringify({
     where,
     type: e.type,
