@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- 📁 FILE: D:\EquationTool\word_style_editor.html -->
-<!-- 📌 WHAT: Equation Studio UI v1.2 - Word-style Equation tab, page tools (delete), page navigator, no always-on-top -->
+<!-- 📌 WHAT: Equation Studio UI v1.2 (final) - Word-style Equation tab, page tools, page navigator, wrap-aware accents -->
 <html lang="en" data-theme="light" data-layout="print">
 <head>
 <meta charset="UTF-8">
@@ -107,8 +107,7 @@ svg{display:block}
 .sym-search{margin-left:auto;height:28px;width:190px;max-width:100%;padding:0 10px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface-2);color:var(--text);font-size:12.5px;outline:none}
 .sym-search:focus{border-color:var(--accent);background:var(--surface)}
 .sym-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(38px,1fr));gap:4px;padding:6px 12px 10px;max-height:150px;overflow-y:auto}
-.sym{height:34px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);color:var(--text);font-size:16px;cursor:pointer;transition:all .1s;padding:0;display:grid;place-items:center;overflow:hidden}
-.sym{position:relative;user-select:none}
+.sym{height:34px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);color:var(--text);font-size:16px;cursor:pointer;transition:all .1s;padding:0;display:grid;place-items:center;overflow:hidden;position:relative;user-select:none}
 .sym::after{content:"";position:absolute;inset:0;z-index:3}
 .sym:hover{background:var(--accent-soft);border-color:var(--accent-border);color:var(--accent)}
 .sym math-field{pointer-events:none;border:none!important;background:transparent!important;font-size:16px;color:inherit;min-width:0;padding:0}
@@ -121,8 +120,7 @@ svg{display:block}
 .panel-title{font-size:11px;font-weight:700;color:var(--faint);margin:2px 0 10px 2px;text-transform:uppercase;letter-spacing:.7px}
 .panel-title:not(:first-child){margin-top:14px}
 .panel-grid{display:grid;gap:8px}
-.dd-item{border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface-2);padding:8px 6px;cursor:pointer;display:flex;align-items:center;justify-content:center;min-height:46px;overflow:hidden;transition:all .12s}
-.dd-item{position:relative;user-select:none}
+.dd-item{border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface-2);padding:8px 6px;cursor:pointer;display:flex;align-items:center;justify-content:center;min-height:46px;overflow:hidden;transition:all .12s;position:relative;user-select:none}
 .dd-item::after{content:"";position:absolute;inset:0;z-index:3}
 .dd-item:hover{background:var(--accent-soft);border-color:var(--accent-border)}
 .dd-item:active{transform:scale(.97)}
@@ -179,6 +177,7 @@ html[data-layout="print"] .doc-hint{left:var(--pg-m);top:var(--pg-m);font-size:1
 #documentArea math-field:hover{border-color:var(--border-strong)}
 #documentArea math-field:focus-within{border-color:var(--accent);background:var(--accent-soft)}
 math-field::part(virtual-keyboard-toggle),math-field::part(menu-toggle){display:none!important}
+#documentArea math-field[data-arm]{outline:2px dashed var(--accent);outline-offset:2px;min-width:40px}
 
 /* ---------- Status bar ---------- */
 .statusbar{display:flex;align-items:center;justify-content:space-between;gap:10px;height:30px;padding:0 12px;background:var(--surface);border-top:1px solid var(--border);color:var(--muted);font-size:12px;flex:none}
@@ -473,6 +472,10 @@ html.cap #documentArea math-field{color:#111!important;border-color:transparent!
 <script>
 if (window.mathVirtualKeyboard) window.mathVirtualKeyboard.container = null;
 
+/* any unexpected JS error ends up in equation_studio.log */
+window.addEventListener('error', e => { console.log('JS ERROR: ' + e.message + ' (line ' + e.lineno + ')'); });
+window.addEventListener('unhandledrejection', e => { console.log('JS PROMISE ERROR: ' + (e.reason && e.reason.message || e.reason)); });
+
 /* ---------- helpers ---------- */
 const $  = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -555,6 +558,7 @@ function serialize(){
 function restoreDoc(html){
   doc.innerHTML = (html && html.trim()) ? html : '<p><br></p>';
   $$('.equation-delete-btn', doc).forEach(e => e.remove());
+  $$('math-field[data-arm]', doc).forEach(m => m.removeAttribute('data-arm'));
   $$('math-field', doc).forEach(mf => {
     const v = mf.getAttribute('value');
     setupMathField(mf);
@@ -618,6 +622,27 @@ doc.addEventListener('input', () => afterChange(true));
 /* ---------- equations ---------- */
 function setupMathField(mf){
   mf.setAttribute('math-virtual-keyboard-policy', 'manual');
+  /* "armed" accent: wait for the first character, then put the accent on it */
+  mf.addEventListener('input', () => {
+    let now = '';
+    try { now = mf.getValue('latex'); } catch(e){}
+    if (now.length < 120) console.log('INPUT ' + now);
+    const tpl = mf.dataset.arm;
+    if (!tpl || mf._arming) return;
+    const content = now.trim();
+    if (!content) return;
+    mf._arming = true;
+    delete mf.dataset.arm;
+    const built = tpl.replace(/#@/g, content).replace(/#\?/g, '\\placeholder{}');
+    try {
+      mf.value = built;
+      mf.focus();
+      mf.executeCommand('moveToMathfieldEnd');
+    } catch(err){ console.log('arm convert failed: ' + err.message); }
+    try { console.log('ARM-DONE ' + built + ' | now: ' + mf.getValue('latex')); } catch(e){}
+    mf._arming = false;
+    afterChange(true);
+  });
   mf.addEventListener('focusin', () => { activeField = mf; mf.classList.add('is-focused'); });
   mf.addEventListener('focusout', () => {
     setTimeout(() => {
@@ -652,19 +677,126 @@ function placeAtCursor(node){
   range.setStartAfter(node); range.collapse(true);
   sel.removeAllRanges(); sel.addRange(range);
 }
+
+/* Templates that wrap what is already there (accents, bars, boxes, font styles).
+   For these we resolve the "#@" slot ourselves, so an empty slot is always a real placeholder you can type into. */
+const WRAP_RX = /^\\(dot|ddot|dddot|hat|widehat|check|acute|grave|breve|tilde|widetilde|bar|vec|mathring|overline|underline|overrightarrow|overleftarrow|overleftrightarrow|overbrace|underbrace|boxed|enclose|cancel|bcancel|xcancel|phantom|mathbf|mathit|mathrm|mathbb|mathcal|mathfrak|mathsf|mathtt|boldsymbol)\b/;
+
+/* ---- helpers: read / place the selection inside a math-field ---- */
+function firstRange(mf){
+  const rs = mf.selection && mf.selection.ranges;
+  return (rs && rs[0]) ? rs[0] : null;
+}
+function rangeLatex(mf, a, b){
+  try { return mf.getValue(a, b, 'latex'); }
+  catch(e1){ try { return mf.getValue([a, b], 'latex'); } catch(e2){ return ''; } }
+}
+function selectionLatex(mf){
+  try { return mf.getValue(mf.selection, 'latex'); }
+  catch(e){ const r = firstRange(mf); return r ? rangeLatex(mf, r[0], r[1]) : ''; }
+}
+function placeholderSelected(mf){
+  const r = firstRange(mf);
+  if (!r || r[0] === r[1]) return false;
+  return /placeholder|#\?/.test(selectionLatex(mf));
+}
+/* Selects the first empty slot (the light-blue box). Returns how it worked, or '' if it did not. */
+function selectFirstPlaceholder(mf){
+  try { mf.focus(); } catch(e){}
+  if (placeholderSelected(mf)) return 'already-selected';
+  for (const cmd of ['moveToNextPlaceholder', 'moveToPreviousPlaceholder']){
+    try { mf.executeCommand(cmd); } catch(e){}
+    if (placeholderSelected(mf)) return cmd;
+  }
+  try {
+    const last = mf.lastOffset;
+    for (let i = 1; i <= last; i++){
+      mf.selection = { ranges: [[i - 1, i]], direction: 'forward' };
+      if (placeholderSelected(mf)) return 'scan@' + i;
+    }
+  } catch(e){ console.log('PH scan failed: ' + e.message); }
+  return '';
+}
+function dumpModel(mf){
+  try {
+    const last = mf.lastOffset, out = [];
+    for (let i = 1; i <= last; i++) out.push(i + ':' + rangeLatex(mf, i - 1, i));
+    console.log('PH-DUMP last=' + last + ' | ' + out.join(' | ') + ' | latex=' + mf.getValue('latex'));
+  } catch(e){ console.log('PH-DUMP failed: ' + e.message); }
+}
+
+/* accent atoms use the same selected-placeholder insertion path as other structures */
+const ARM_RX = /^\\(dot|ddot|dddot|hat|widehat|check|acute|grave|breve|tilde|widetilde|bar|vec|mathring|overrightarrow|overleftarrow|overleftrightarrow)\b/;
+
+function insertIntoField(mf, latex){
+  const PH = '\\placeholder{}';                       // MathLive's real, typeable placeholder
+  const wrap = latex.indexOf('#@') !== -1 && WRAP_RX.test(latex);
+  let out = latex, wrapped = '';
+  if (wrap){
+    try {
+      let r = firstRange(mf);
+      if (r && r[0] === r[1]){            // nothing selected -> take the item before the caret
+        mf.executeCommand('extendSelectionBackward');
+        r = firstRange(mf);
+      }
+      if (r && r[0] !== r[1]) wrapped = selectionLatex(mf);
+    } catch(e){ console.log('wrap lookup failed: ' + e.message); }
+
+    // Accents can use MathLive's selected placeholder directly. Keeping this on
+    // the normal insertion path gives the field real keyboard focus.
+    if (!wrapped && ARM_RX.test(latex)){
+      let empty = false;
+      try { empty = !mf.getValue('latex').trim(); } catch(e){}
+      if (empty){
+        console.log('ARM ' + latex + ' | direct placeholder insertion');
+      }
+    }
+
+    out = latex.replace(/#@/g, wrapped || PH).replace(/#\?/g, PH);
+    console.log('WRAP ' + latex + ' | wrapped: "' + wrapped + '" | sending: ' + out);
+  }
+  mf.insert(out, { format: 'latex', selectionMode: 'placeholder', focus: true });
+
+  if (wrap && !wrapped){
+    // nothing was wrapped, so the new box/bar has an empty slot: put the cursor in it
+    let tries = 0;
+    const arm = () => {
+      tries++;
+      const how = selectFirstPlaceholder(mf);
+      console.log('PH try ' + tries + ': ' + (how || 'FAILED'));
+      if (how) return;
+      if (tries < 3){ setTimeout(arm, 60 * tries); return; }
+      dumpModel(mf);
+      showToast('Could not put the cursor in the box. Click the box and type.', 'warn');
+    };
+    arm();
+  }
+  try { console.log('AFTER ' + mf.getValue('latex') + ' | selection ' + JSON.stringify(mf.selection && mf.selection.ranges)); } catch(e){}
+}
+
 function createEquation(latex){
   const mf = document.createElement('math-field');
   setupMathField(mf);
   placeAtCursor(mf);
-  setTimeout(() => { mf.focus(); if (latex) mf.insert(latex); afterChange(true); }, 60);
+  setTimeout(() => {
+    try {
+      mf.focus();
+      if (latex) insertIntoField(mf, latex);
+    } catch(err){ console.log('insert error: ' + err.message); }
+    afterChange(true);
+  }, 60);
   return mf;
 }
 function insertLatex(latex){
   const ae = document.activeElement;
   const keep = activeField && doc.contains(activeField) &&
                (ae === activeField || (ae && ae.closest && ae.closest('.ribbon')));
-  if (keep){ activeField.insert(latex); activeField.focus(); afterChange(true); }
-  else createEquation(latex);
+  console.log('INSERT ' + latex + ' | into existing equation: ' + !!keep);
+  if (keep){
+    try { insertIntoField(activeField, latex); activeField.focus(); }
+    catch(err){ console.log('insert error: ' + err.message); }
+    afterChange(true);
+  } else createEquation(latex);
 }
 function deleteActiveEquation(){
   if (activeField && doc.contains(activeField)){
@@ -680,9 +812,10 @@ function exitEquation(){
   const s = getSelection(); s.removeAllRanges(); s.addRange(r);
 }
 
-/* Backspace right after an equation deletes the whole equation */
+/* Backspace right after an equation (caret in the text, not inside the equation) deletes the whole equation */
 doc.addEventListener('keydown', e => {
   if (e.key !== 'Backspace') return;
+  if (e.target && e.target.tagName === 'MATH-FIELD') return;   // typing inside an equation is MathLive's job
   const sel = getSelection();
   if (!sel.rangeCount || !sel.isCollapsed) return;
   const r = sel.getRangeAt(0), c = r.startContainer, o = r.startOffset;
@@ -748,15 +881,21 @@ function positionAndOpen(panel, btn){
   if (wasOpen) return;
   if (panel.parentElement !== document.body) document.body.appendChild(panel);
   const m = 8, vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
+  const b = btn.getBoundingClientRect();
   panel.style.maxWidth = Math.max(160, vw - m * 2) + 'px';
   panel.style.maxHeight = Math.max(120, vh - m * 2) + 'px';
   panel.style.left = '0px'; panel.style.top = '0px';
   panel.classList.add('open'); btn.classList.add('is-active');
-  const b = btn.getBoundingClientRect(), p = panel.getBoundingClientRect();
+  let p = panel.getBoundingClientRect();
+  const below = vh - b.bottom - m - 6, above = b.top - m - 6;
+  let top;
+  if (p.height <= below){ top = b.bottom + 6; }
+  else if (p.height <= above){ top = b.top - p.height - 6; }
+  else if (below >= above){ panel.style.maxHeight = Math.max(120, below) + 'px'; top = b.bottom + 6; }
+  else { panel.style.maxHeight = Math.max(120, above) + 'px'; p = panel.getBoundingClientRect(); top = Math.max(m, b.top - 6 - p.height); }
+  p = panel.getBoundingClientRect();
   let left = Math.min(Math.max(b.left, m), vw - p.width - m);
   if (left < m) left = m;
-  let top = b.bottom + 6;
-  if (top + p.height > vh - m) top = Math.max(m, b.top - p.height - 6);
   panel.style.left = left + 'px'; panel.style.top = top + 'px';
 }
 function bindPanel(btn, panelOrFn){
@@ -815,12 +954,17 @@ function ribbonGroup(name, items){
 /* ==========================================================
    EQUATION DATA  (every item: [latex, tooltip, preview])
    #@ = selected text / first slot,  #? = empty slot
+   opts.pv = text shown in previews instead of an empty box (so accents look like accents)
    ========================================================== */
 const P = s => s.replace(/#[@?]/g, '\\Box');
-const S = (title, cols, items, opts) => Object.assign({
-  title, cols,
-  items: items.map(x => typeof x === 'string' ? [x, '', P(x)] : [x[0], x[1] || '', x[2] || P(x[0])])
-}, opts || {});
+const S = (title, cols, items, opts) => {
+  const pv = opts && opts.pv;
+  const pr = pv ? (s => s.replace(/#@/g, pv).replace(/#\?/g, '\\Box')) : P;
+  return Object.assign({
+    title, cols,
+    items: items.map(x => typeof x === 'string' ? [x, '', pr(x)] : [x[0], x[1] || '', x[2] || pr(x[0])])
+  }, opts || {});
+};
 const grid = (r, c) => Array.from({ length:r }, () => Array(c).fill('#?').join('&')).join('\\\\');
 const mat = (env, r, c) => `\\begin{${env}}${grid(r, c)}\\end{${env}}`;
 const sized = (env, list) => list.map(([r, c]) => [mat(env, r, c), `${r}×${c} matrix`]);
@@ -960,15 +1104,15 @@ const GROUPS = [
       ['\\dot{#@}','Dot'],['\\ddot{#@}','Double dot'],['\\dddot{#@}','Triple dot'],['\\hat{#@}','Hat'],
       ['\\widehat{#@}','Wide hat'],['\\check{#@}','Check'],['\\acute{#@}','Acute'],['\\grave{#@}','Grave'],
       ['\\breve{#@}','Breve'],['\\tilde{#@}','Tilde'],['\\widetilde{#@}','Wide tilde'],['\\bar{#@}','Bar'],
-      ['\\vec{#@}','Vector arrow'],['\\mathring{#@}','Ring']]),
+      ['\\vec{#@}','Vector arrow'],['\\mathring{#@}','Ring']], { pv:'x' }),
     S('Bars, Arrows and Braces',4,[
       ['\\overline{#@}','Overbar'],['\\underline{#@}','Underbar'],
       ['\\overrightarrow{#@}','Arrow over (right)'],['\\overleftarrow{#@}','Arrow over (left)'],
       ['\\overleftrightarrow{#@}','Arrow over (both)'],
-      ['\\overbrace{#@}^{#?}','Overbrace'],['\\underbrace{#@}_{#?}','Underbrace']]),
+      ['\\overbrace{#@}^{#?}','Overbrace'],['\\underbrace{#@}_{#?}','Underbrace']], { pv:'xyz' }),
     S('Boxes and Strikes',4,[
       ['\\boxed{#@}','Boxed formula'],['\\enclose{circle}{#@}','Circled'],['\\enclose{roundedbox}{#@}','Rounded box'],
-      ['\\cancel{#@}','Strike ╱'],['\\bcancel{#@}','Strike ╲'],['\\xcancel{#@}','Strike ╳'],['\\phantom{#@}','Invisible (keeps space)']])]},
+      ['\\cancel{#@}','Strike ╱'],['\\bcancel{#@}','Strike ╲'],['\\xcancel{#@}','Strike ╳'],['\\phantom{#@}','Invisible (keeps space)','\\text{hidden}']], { pv:'x+y' })]},
 
   { label:'Limit and Log', icon:'<span style="font-size:11px;line-height:1.1;text-align:center">lim<br>n→∞</span>', cw:96, sections:[
     S('Limits',3,['\\lim_{#? \\to #?}','\\lim_{#? \\to \\infty}','\\lim_{#? \\to 0}','\\lim_{#? \\to #?^{+}}','\\lim_{#? \\to #?^{-}}','\\limsup_{#?}','\\liminf_{#?}']),
@@ -1216,7 +1360,7 @@ const SYM = {
  Geometry:[["∠","\\angle"],["∡","\\measuredangle"],["∢","\\sphericalangle"],["⊥","\\perp"],["∥","\\parallel"],["△","\\triangle"],["▽","\\triangledown"],["□","\\square"],["■","\\blacksquare"],["◊","\\lozenge"],["⋄","\\diamond"],["○","\\bigcirc"],["∘","\\circ"],["≅","\\cong"],["∼","\\sim"],["°","^\\circ"],["′","^{\\prime}"],["″","^{\\prime\\prime}"],["↗","\\nearrow"],["→","\\rightarrow"]],
  Scripts:[...alpha('mathcal'), ...alpha('mathbb'), ...alpha('mathfrak')],
  Delimiters:[["(","("],[")",")"],["[","["],["]","]"],["{","\\lbrace"],["}","\\rbrace"],["⟨","\\langle"],["⟩","\\rangle"],["⌊","\\lfloor"],["⌋","\\rfloor"],["⌈","\\lceil"],["⌉","\\rceil"],["|","\\vert"],["‖","\\Vert"],["⟦","\\llbracket"],["⟧","\\rrbracket"]],
- Misc:[["⋯","\\cdots"],["…","\\ldots"],["⋮","\\vdots"],["⋱","\\ddots"],["∎","\\blacksquare"],["□","\\square"],["†","\\dagger"],["‡","\\ddagger"],["§","\\S"],["¶","\\P"],["ℏ","\\hbar"],["ℓ","\\ell"],["∂","\\partial"],["∇","\\nabla"],["♭","\\flat"],["♮","\\natural"],["♯","\\sharp"],["♠","\\spadesuit"],["♣","\\clubsuit"],["♡","\\heartsuit"],["♢","\\diamondsuit"],["∠","\\angle"],["√","\\surd"],["′","^{\\prime}"]]
+ Misc:[["⋯","\\cdots"],["…","\\ldots"],["⋮","\\vdots"],["⋱","\\ddots"],["∎","\\blacksquare"],["□","\\square"],["†","\\dagger"],["‡","\\ddagger"],["§","\\S"],["ℏ","\\hbar"],["ℓ","\\ell"],["∂","\\partial"],["∇","\\nabla"],["♭","\\flat"],["♮","\\natural"],["♯","\\sharp"],["♠","\\spadesuit"],["♣","\\clubsuit"],["♡","\\heartsuit"],["♢","\\diamondsuit"],["∠","\\angle"],["√","\\surd"],["′","^{\\prime}"]]
 };
 let recent = [];
 try { recent = JSON.parse(store.get('recentSymbols') || '[]'); } catch(e){ recent = []; }
