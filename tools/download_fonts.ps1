@@ -3,7 +3,7 @@
 
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-$dest = Join-Path $PSScriptRoot "fonts"
+$dest = Join-Path (Split-Path $PSScriptRoot -Parent) "fonts"
 New-Item -ItemType Directory -Force -Path $dest | Out-Null
 
 $sources = @(

@@ -1,0 +1,54 @@
+/* 📁 FILE: assets/solver.css : solve button + right-side solution panel */
+:root{--solve-w:360px}
+
+/* floating 💡 button next to the equation being edited */
+#solveFab{position:fixed;z-index:60;width:26px;height:26px;border-radius:50%;border:1px solid var(--accent-border);background:var(--surface);color:var(--accent);box-shadow:var(--sh-md);display:none;place-items:center;cursor:pointer;padding:0}
+#solveFab.show{display:grid}
+#solveFab:hover{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+
+/* panel */
+#solvePanel{display:none;flex-direction:column;width:var(--solve-w);flex:none;background:var(--surface);border-left:1px solid var(--border);min-height:0}
+.solve-open #solvePanel{display:flex}
+.solve-open .page-nav{right:calc(var(--solve-w) + 26px)}
+.sol-head{display:flex;align-items:center;justify-content:space-between;height:42px;padding:0 8px 0 14px;border-bottom:1px solid var(--border);flex:none}
+.sol-head-title{display:flex;align-items:center;gap:8px;font-size:13.5px}
+.sol-body{flex:1;min-height:0;overflow-y:auto;padding:12px 14px 16px}
+.sol-foot{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--border);flex:none}
+.sol-foot[hidden]{display:none}
+.sol-foot .btn{flex:1;justify-content:center}
+
+.sol-label{font-size:10.5px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px}
+.sol-problem{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md);padding:10px 12px;margin-bottom:12px;overflow-x:auto}
+.sol-math{display:block;pointer-events:none;border:none!important;background:transparent!important;font-size:17px;color:var(--text);min-width:0}
+.sol-meta{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;font-size:12px;color:var(--muted)}
+.sol-badge{display:inline-block;background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent-border);border-radius:20px;padding:2px 10px;font-size:11.5px;font-weight:600}
+.sol-select{height:26px;border:1px solid var(--border-strong);border-radius:var(--r-sm);background:var(--surface);color:var(--text);font:inherit;font-size:12px;padding:0 6px}
+
+.sol-steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.sol-step{display:flex;gap:10px}
+.sol-num{flex:none;width:22px;height:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-size:11.5px;font-weight:700;display:grid;place-items:center;margin-top:1px}
+.sol-main{min-width:0;flex:1}
+.sol-st{font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:2px}
+.sol-main .sol-math{overflow-x:auto;overflow-y:hidden;padding:2px 0}
+.sol-note{font-size:11.5px;color:var(--muted)}
+
+.sol-answer{margin-top:14px;background:var(--accent-soft);border:1px solid var(--accent-border);border-radius:var(--r-md);padding:10px 12px}
+.sol-answer .sol-label{color:var(--accent)}
+.sol-answer .sol-math{font-size:19px;overflow-x:auto}
+.sol-dec{font-size:12px;color:var(--muted);margin-top:4px}
+.sol-notes{margin:10px 0 0;padding:0;list-style:none;font-size:11.5px;color:var(--muted)}
+.sol-notes li{margin-top:4px}
+
+.sol-error{background:rgba(217,45,32,.08);border:1px solid rgba(217,45,32,.3);border-radius:var(--r-md);padding:12px;color:var(--text)}
+.sol-error b{display:block;margin-bottom:4px;color:var(--danger)}
+.sol-error span{font-size:12px;color:var(--muted)}
+
+.sol-loading{display:flex;flex-direction:column;gap:10px;color:var(--muted);font-size:12.5px;padding-top:4px}
+.sol-spin{width:20px;height:20px;border-radius:50%;border:3px solid var(--border-strong);border-top-color:var(--accent);animation:solspin .8s linear infinite}
+.sol-skel{height:14px;border-radius:6px;background:var(--surface-3)}
+.sol-skel.short{width:60%}
+@keyframes solspin{to{transform:rotate(360deg)}}
+
+html.cap #solvePanel,html.cap #solveFab{display:none!important}
+@media print{#solvePanel,#solveFab{display:none!important}}
+@media (max-width:900px){:root{--solve-w:300px}}
