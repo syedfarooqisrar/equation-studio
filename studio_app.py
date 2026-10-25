@@ -76,7 +76,7 @@ PAGE_PX = 5000                # target page height when splitting
 MAX_SLICES = 300              # safety guard against endless loops (per segment)
 PDF_MARGIN_MM = 19.05         # 0.75 inch, matches the 72 px page margin on screen
 MAX_RENDER_CRASHES = 3        # reloads allowed per minute before giving up
-ALLOWED_REQUESTS = {"clipboard", "save", "folder", "pdf", "print"}
+ALLOWED_REQUESTS = {"clipboard", "save", "folder", "pdf", "print", "selection"}
 SOLVE_TIMEOUT_S = 40          # a solve that takes longer is cancelled
 MAX_SOLVE_LATEX = 2000
 
@@ -433,7 +433,7 @@ class EquationStudio(QWidget):
         page = int(arg) if arg.isdigit() and 1 <= int(arg) <= 999 else None
         if name == "folder":
             self.open_captures_folder()
-        elif name in ("clipboard", "save"):
+        elif name in ("clipboard", "save", "selection"):
             self.start_capture(name, page)
         else:
             self.export_pdf(name)
@@ -461,7 +461,10 @@ class EquationStudio(QWidget):
         QTimer.singleShot(CAPTURE_SETTLE_MS, self.read_info)
 
     def read_info(self) -> None:
-        arg = "null" if self.page_no is None else str(int(self.page_no))
+        if self.mode == "selection":
+            arg = '"sel"'
+        else:
+            arg = "null" if self.page_no is None else str(int(self.page_no))
         self.js(f"window.getCaptureInfo && window.getCaptureInfo({arg});", self.begin_stitch)
 
     def begin_stitch(self, result) -> None:
@@ -577,7 +580,7 @@ class EquationStudio(QWidget):
             return self.finish()
 
         default_path = os.path.join(CAPTURE_DIR, f"equation_{stamp}{tag}.png")
-        label = f"Page {self.page_no}" if self.page_no else "Image"
+        label = "Selection" if self.mode == "selection" else (f"Page {self.page_no}" if self.page_no else "Image")
         if self.mode == "save":
             target, _ = QFileDialog.getSaveFileName(self, "Save image", default_path, "PNG image (*.png)")
             if not target:
@@ -587,9 +590,13 @@ class EquationStudio(QWidget):
             else:
                 self.toast("Error: could not save the file", "error")
         else:
-            image.save(default_path, "PNG")  # backup copy in Captures
+            if self.mode != "selection":
+                image.save(default_path, "PNG")  # backup copy in Captures
             copy_qimage_to_clipboard(image)
-            self.toast(f"{label} copied to clipboard (also saved in Captures)")
+            if self.mode == "selection":
+                self.toast("Picture copied. Paste it in Word with Ctrl+V.")
+            else:
+                self.toast(f"{label} copied to clipboard (also saved in Captures)")
         self.finish()
 
     def fail(self, reason: str) -> None:

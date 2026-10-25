@@ -114,7 +114,7 @@ document.addEventListener('contextmenu', e => { if (!e.target.closest('#document
 }));
 
 /* ===================== 4. Sanitizer (saved HTML is untrusted) ===================== */
-const ALLOWED_TAGS = new Set(['P','BR','B','STRONG','I','EM','U','UL','OL','LI','SPAN','DIV','SUB','SUP','MATH-FIELD']);
+const ALLOWED_TAGS = new Set(['P','BR','B','STRONG','I','EM','U','UL','OL','LI','SPAN','DIV','SUB','SUP','MATH-FIELD','TABLE','TBODY','THEAD','TR','TD','TH','CANVAS']);
 const STYLE_OK = new Set(['color','background-color','font-weight','font-style','text-decoration','text-decoration-line','text-align']);
 function filterStyle(css){
   return css.split(';').map(d => d.trim()).filter(d => {
@@ -134,7 +134,12 @@ function sanitizeHtml(html){
       [...ch.attributes].forEach(a => {
         const n = a.name.toLowerCase();
         if (n === 'style'){ const f = filterStyle(a.value); if (f) ch.setAttribute('style', f); else ch.removeAttribute('style'); }
-        else if (!(n === 'value' && ch.tagName === 'MATH-FIELD')) ch.removeAttribute(a.name);
+        else if (n === 'value' && ch.tagName === 'MATH-FIELD') { /* keep */ }
+        else if (n === 'class' && /^eq-[a-z0-9 -]{0,40}$/.test(a.value)) { /* keep: table / chart marker */ }
+        else if (n === 'data-chart' && ch.tagName === 'DIV' && a.value.length < 60000) { /* keep: validated again when drawn */ }
+        else if (n === 'contenteditable' && a.value === 'false' && ch.tagName === 'DIV') { /* keep */ }
+        else if ((n === 'colspan' || n === 'rowspan') && /^\d{1,2}$/.test(a.value)) { /* keep */ }
+        else ch.removeAttribute(a.name);
       });
       if (ch.tagName === 'MATH-FIELD') ch.textContent = '';
       else clean(ch);
@@ -192,7 +197,7 @@ window.addEventListener('beforeunload', () => { try { saveNow(); } catch(e){} })
 
 /* Stats */
 function plainText(){ return (doc.innerText || '').replace(/\u200B/g, '').replace(/\u00A0/g, ' '); }
-function isEmpty(){ return !doc.querySelector('math-field') && !plainText().trim(); }
+function isEmpty(){ return !doc.querySelector('math-field,table,.eq-chart') && !plainText().trim(); }
 function docCounts(){
   const txt = plainText();
   return { eq: $$('math-field', doc).length, words: txt.trim().split(/\s+/).filter(Boolean).length, chars: txt.replace(/\s/g, '').length };
@@ -451,6 +456,7 @@ function positionAndOpen(panel, btn){
   panel.style.maxHeight = Math.max(120, vh - m * 2) + 'px';
   panel.style.left = '0px'; panel.style.top = '0px';
   panel.classList.add('open'); btn.classList.add('is-active');
+  if (typeof panel._onOpen === 'function') setTimeout(panel._onOpen, 0);
   let p = panel.getBoundingClientRect();
   const below = vh - b.bottom - m - 6, above = b.top - m - 6;
   let top;
@@ -482,6 +488,7 @@ function buildGridPanel(sections, cw){
     sec.items.forEach(([latex, title, preview]) => {
       const it = document.createElement('div');
       it.className = 'dd-item' + (sec.labeled ? ' labeled' : '');
+      it.dataset.q = ((title || '') + ' ' + latex).toLowerCase();
       if (title){ it.title = title; it.setAttribute('aria-label', title); }
       if (sec.labeled && title){ const lb = document.createElement('div'); lb.className = 'dd-label'; lb.textContent = title; it.appendChild(lb); }
       const pm = document.createElement('math-field');
@@ -513,7 +520,53 @@ function ribbonGroup(name, items){
   return g;
 }
 GROUPS.forEach(g => $('#equationRow').appendChild(ribbonGroup(g.name, g.items)));
-bindPanel($('#galleryBtn'), () => buildGridPanel(GALLERY, 380));
+function buildGalleryPanel(){
+  const panel = buildGridPanel(GALLERY, 380);
+  const bar = document.createElement('div'); bar.className = 'panel-search';
+  const input = document.createElement('input');
+  input.type = 'search'; input.placeholder = 'Search equations (quadratic, sin, area…)';
+  input.setAttribute('aria-label', 'Search equations'); input.autocomplete = 'off'; input.spellcheck = false;
+  bar.appendChild(input);
+  const empty = document.createElement('div'); empty.className = 'panel-empty'; empty.textContent = 'No equations found.'; empty.hidden = true;
+  panel.insertBefore(bar, panel.firstChild);
+  panel.appendChild(empty);
+
+  const apply = () => {
+    const words = input.value.trim().toLowerCase().replace(/\\/g, '').split(/\s+/).filter(Boolean);
+    let total = 0;
+    $$('.dd-item', panel).forEach(it => {
+      const hay = (it.dataset.q || '').replace(/\\/g, '');
+      const hit = words.every(w => hay.includes(w));
+      it.hidden = !hit;
+      if (hit) total++;
+    });
+    let heading = null;
+    [...panel.children].forEach(ch => {
+      if (ch.classList.contains('panel-title')) heading = ch;
+      else if (ch.classList.contains('panel-grid')){
+        const any = ch.querySelector('.dd-item:not([hidden])');
+        ch.hidden = !any;
+        if (heading) heading.hidden = !any;
+      }
+    });
+    empty.hidden = total > 0;
+  };
+  input.addEventListener('input', apply);
+  input.addEventListener('click', e => e.stopPropagation());
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Escape') return;                        // let Esc close the panel
+    e.stopPropagation();                                   // typing must not trigger app shortcuts
+    if (e.key === 'Enter'){
+      e.preventDefault();
+      const first = panel.querySelector('.dd-item:not([hidden])');
+      if (first) first.click();
+    }
+  });
+  panel.addEventListener('click', e => { if (!e.target.closest('.dd-item')) e.stopPropagation(); });
+  panel._onOpen = () => { input.value = ''; apply(); input.focus({ preventScroll: true }); };
+  return panel;
+}
+bindPanel($('#galleryBtn'), buildGalleryPanel);
 
 /* ===================== 11. Symbols tab ===================== */
 let recent = [];
@@ -574,6 +627,7 @@ $$('.tab').forEach(t => on(t, 'click', () => {
   $('#tabHome').classList.toggle('hidden', t.dataset.tab !== 'home');
   $('#tabEquation').classList.toggle('hidden', t.dataset.tab !== 'equation');
   $('#tabSymbols').classList.toggle('hidden', t.dataset.tab !== 'symbols');
+  const tabIns = $('#tabInsert'); if (tabIns) tabIns.classList.toggle('hidden', t.dataset.tab !== 'insert');
   closeAllDropdowns();
 }));
 

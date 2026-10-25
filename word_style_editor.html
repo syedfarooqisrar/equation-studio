@@ -8,11 +8,16 @@
 <title>Equation Studio</title>
 <link rel="stylesheet" href="assets/app.css">
 <link rel="stylesheet" href="assets/solver.css">
+<link rel="stylesheet" href="assets/tables-charts.css">
 <script src="mathlive.min.js"></script>
 <script src="assets/mathlive-config.js"></script>
 <script src="assets/equation-data.js" defer></script>
 <script src="assets/app.js" defer></script>
 <script src="assets/solver-ui.js" defer></script>
+<script src="assets/clipboard.js" defer></script>
+<script src="assets/chart.umd.min.js" defer></script>
+<script src="assets/tables.js" defer></script>
+<script src="assets/charts.js" defer></script>
 <style id="pgStyle"></style>
 </head>
 <body>
@@ -38,6 +43,7 @@
   <nav class="ribbon no-focus-steal" id="ribbon" aria-label="Ribbon">
     <div class="ribbon-tabs" role="tablist">
       <button class="tab active" data-tab="home" role="tab" aria-selected="true">Home</button>
+      <button class="tab" data-tab="insert" role="tab" aria-selected="false">Insert</button>
       <button class="tab" data-tab="equation" role="tab" aria-selected="false">Equation</button>
       <button class="tab" data-tab="symbols" role="tab" aria-selected="false">Symbols</button>
       <button class="icon-btn" id="ribbonToggle" title="Collapse / expand ribbon"></button>
@@ -68,6 +74,17 @@
             <button class="rbtn" id="delEqBtn" title="Delete the selected equation"><span class="ri" data-icon="trash" data-size="22"></span><span class="rl">Delete Eq.</span></button>
             <button class="rbtn" id="clearBtn" title="Clear the whole document"><span class="ri" data-icon="x" data-size="22"></span><span class="rl">Clear</span></button>
           </div><div class="rgroup-label">Edit</div></div>
+        </div>
+      </div>
+
+      <div id="tabInsert" class="hidden">
+        <div class="ribbon-scroll">
+          <div class="rgroup"><div class="rgroup-items">
+            <button class="rbtn dd" id="tableBtn" title="Insert a table"><span class="ri"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 10h18M3 15h18M9 4v16M15 4v16"/></svg></span><span class="rl">Table</span></button>
+          </div><div class="rgroup-label">Tables</div></div>
+          <div class="rgroup"><div class="rgroup-items">
+            <button class="rbtn accent" id="chartRibbonBtn" title="Make a chart from the table you are in"><span class="ri"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg></span><span class="rl">Chart</span></button>
+          </div><div class="rgroup-label">Charts</div></div>
         </div>
       </div>
 
@@ -115,6 +132,13 @@
         <button class="btn btn-primary" id="solAdd">Add to document</button>
         <button class="btn" id="solAddAnswer">Add answer only</button>
       </div>
+    </aside>
+    <aside id="chartPanel" class="no-focus-steal" aria-label="Insert chart">
+      <div class="sol-head">
+        <div class="sol-head-title"><b>Insert Chart</b></div>
+        <button class="icon-btn" id="chClose" title="Close (Esc)"><span data-icon="x" data-size="16"></span></button>
+      </div>
+      <div class="sol-body" id="chBody"></div>
     </aside>
     <div class="page-nav no-focus-steal" id="pageNav">
       <button id="pgPrev" title="Previous page"><span data-icon="chevL" data-size="14"></span></button>
@@ -173,6 +197,8 @@
       <div class="seg"><button data-layout-set="print">Print</button><button data-layout-set="web">Web</button></div></div>
     <div class="d-row"><span>Page size</span>
       <div class="seg"><button data-size-set="A4">A4</button><button data-size-set="Letter">Letter</button></div></div>
+          <div class="d-row"><span>Copy to Word as</span>
+      <div class="seg"><button data-copy-mode="equation">Equation</button><button data-copy-mode="image">Image</button></div></div>
     <div class="d-row"><span>Dark mode</span><button class="switch" id="themeSwitch" title="Dark mode" role="switch" aria-label="Dark mode"></button></div>
 
     <div class="d-title">Help</div>

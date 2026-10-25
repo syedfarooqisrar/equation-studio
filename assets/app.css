@@ -272,3 +272,9 @@ html.cap #documentArea math-field{color:#111!important;border-color:transparent!
   .sym-search{margin-left:0;width:100%}
   .zoom input[type=range]{width:70px}
 }
+/* ---- gallery search ---- */
+.panel-search{position:sticky;top:0;z-index:5;margin:-14px -14px 10px;padding:12px 14px 8px;background:var(--surface);border-bottom:1px solid var(--border)}
+.panel-search input{width:100%;height:32px;border:1px solid var(--border-strong);border-radius:var(--r-md);background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;padding:0 10px;outline:none}
+.panel-search input:focus{border-color:var(--accent);background:var(--surface);box-shadow:var(--ring)}
+.panel-empty{padding:18px 4px;color:var(--faint);text-align:center;font-size:12.5px}
+.dd-item[hidden],.panel-grid[hidden],.panel-title[hidden],.panel-empty[hidden]{display:none}

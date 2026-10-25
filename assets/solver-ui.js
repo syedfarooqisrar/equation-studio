@@ -55,7 +55,7 @@
     c.appendChild(mathEl(latex));
     return c;
   }
-  function openPanel() { shell.classList.add('solve-open'); }
+  function openPanel() { shell.classList.remove('chart-open'); shell.classList.add('solve-open'); }
   function closePanel() {
     shell.classList.remove('solve-open');
     seq++; result = null; clearTimeout(waitTimer);
