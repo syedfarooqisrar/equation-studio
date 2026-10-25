@@ -274,6 +274,27 @@
     if (next) setCaret(next, true);
   });
 
+  /* ============ Enter moves down one cell (like Excel); Shift+Enter up; Alt+Enter = new line inside the cell ============ */
+  on(doc, 'keydown', e => {
+    if (e.key !== 'Enter' || e.ctrlKey || e.metaKey || e.isComposing) return;
+    if (e.target && e.target.tagName === 'MATH-FIELD') return;     // inside an equation Enter is MathLive's job
+    const td = currentCell();
+    if (!td) return;
+    e.preventDefault();
+    if (e.altKey) {                                                // a line break inside the same cell
+      document.execCommand('insertLineBreak');
+      afterChange(true);
+      return;
+    }
+    const tr = td.parentElement, idx = cellIndex(td);
+    let row = e.shiftKey ? tr.previousElementSibling : tr.nextElementSibling;
+    if (!row && !e.shiftKey) {                                     // Enter in the last row adds a new row
+      row = addRow(tr, true);
+      afterChange(true);
+    }
+    if (row) setCaret(row.cells[Math.min(idx, row.cells.length - 1)], true);
+  });
+
   /* ============ paste from Excel / Sheets / Word tables (tab-separated text) becomes a table ============ */
   doc.addEventListener('paste', e => {
     if (e.target && e.target.tagName === 'MATH-FIELD') return;
