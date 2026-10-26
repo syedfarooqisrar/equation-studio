@@ -142,12 +142,12 @@ def split_pages(image: QImage, breaks_px: list[int], max_px: int) -> list[QImage
     return pages
 
 
-def make_pdf_layout(size_name: str) -> QPageLayout:
+def make_pdf_layout(size_name: str, margin_mm: float = PDF_MARGIN_MM) -> QPageLayout:
     size_id = QPageSize.PageSizeId.Letter if size_name == "Letter" else QPageSize.PageSizeId.A4
     return QPageLayout(
         QPageSize(size_id),
         QPageLayout.Orientation.Portrait,
-        QMarginsF(PDF_MARGIN_MM, PDF_MARGIN_MM, PDF_MARGIN_MM, PDF_MARGIN_MM),
+        QMarginsF(margin_mm, margin_mm, margin_mm, margin_mm),
         QPageLayout.Unit.Millimeter,
     )
 
@@ -162,6 +162,8 @@ def harden(settings: QWebEngineSettings) -> None:
         ("PdfViewerEnabled", False),
         ("ScreenCaptureEnabled", False),
         ("WebRTCPublicInterfacesOnly", True),
+        ("JavascriptCanAccessClipboard", True),
+        ("JavascriptCanPaste", True),
     ):
         attr = getattr(QWebEngineSettings.WebAttribute, name, None)
         if attr is not None:
@@ -628,10 +630,18 @@ class EquationStudio(QWidget):
         else:
             target = os.path.join(CAPTURE_DIR, f"print_{stamp}.pdf")
         self.pdf_pending = True
-        self.page.printToPdf(target, make_pdf_layout(size_name if size_name in ("A4", "Letter") else "A4"))
+        size = size_name if size_name in ("A4", "Letter") else "A4"
+        # the page prepares the same page breaks as the screen (and the header, footer, page numbers) first
+        self.js(
+            "window.preparePrint ? window.preparePrint() : false;",
+            lambda mirrored, t=target, s=size: self.page.printToPdf(
+                t, make_pdf_layout(s, 0.0 if mirrored is True else PDF_MARGIN_MM)
+            ),
+        )
 
     def on_pdf_done(self, path: str, ok: bool) -> None:
         self.pdf_pending = False
+        self.js("window.restorePrint && window.restorePrint();")
         if not ok:
             log.error("PDF export failed: %s", path)
             return self.toast("Error: PDF export failed", "error")

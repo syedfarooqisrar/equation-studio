@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- 📁 FILE: D:\EquationTool\word_style_editor.html -->
-<!-- 📌 WHAT: Equation Studio markup only. Styles: assets/app.css | Logic: assets/app.js | Data: assets/equation-data.js -->
+<!-- 📌 WHAT: Equation Studio markup. Styles: assets/*.css | Logic: assets/*.js | Equation data: assets/equation-data.js -->
 <html lang="en" data-theme="light" data-layout="print">
 <head>
 <meta charset="UTF-8">
@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="assets/app.css">
 <link rel="stylesheet" href="assets/solver.css">
 <link rel="stylesheet" href="assets/tables-charts.css">
+<link rel="stylesheet" href="assets/thesis.css">
 <script src="mathlive.min.js"></script>
 <script src="assets/mathlive-config.js"></script>
 <script src="assets/equation-data.js" defer></script>
@@ -18,6 +19,9 @@
 <script src="assets/chart.umd.min.js" defer></script>
 <script src="assets/tables.js" defer></script>
 <script src="assets/charts.js" defer></script>
+<script src="assets/home.js" defer></script>
+<script src="assets/insert.js" defer></script>
+<script src="assets/references.js" defer></script>
 <style id="pgStyle"></style>
 </head>
 <body>
@@ -44,50 +48,151 @@
     <div class="ribbon-tabs" role="tablist">
       <button class="tab active" data-tab="home" role="tab" aria-selected="true">Home</button>
       <button class="tab" data-tab="insert" role="tab" aria-selected="false">Insert</button>
+      <button class="tab" data-tab="references" role="tab" aria-selected="false">References</button>
       <button class="tab" data-tab="equation" role="tab" aria-selected="false">Equation</button>
       <button class="tab" data-tab="symbols" role="tab" aria-selected="false">Symbols</button>
       <button class="icon-btn" id="ribbonToggle" title="Collapse / expand ribbon"></button>
     </div>
     <div class="ribbon-panels">
+
+      <!-- ---------- HOME ---------- -->
       <div id="tabHome">
         <div class="ribbon-scroll">
+          <div class="rgroup"><div class="rgroup-items">
+            <button class="rbtn" id="btnPaste" title="Paste (Ctrl+V)"><span class="ri" data-i="paste" data-s="22"></span><span class="rl">Paste</span></button>
+            <div class="rstack">
+              <button class="fmt sm" id="btnCut" title="Cut (Ctrl+X)"><span data-i="cut"></span></button>
+              <button class="fmt sm" id="btnCopy" title="Copy (Ctrl+C)"><span data-i="copy"></span></button>
+              <button class="fmt sm" id="btnPainter" title="Format Painter"><span data-i="painter"></span></button>
+            </div>
+          </div><div class="rgroup-label">Clipboard</div></div>
+
+          <div class="rgroup"><div class="rgroup-items" style="flex-direction:column;gap:4px;align-items:flex-start">
+            <div class="rline">
+              <select class="rsel" id="selFont" style="width:150px" aria-label="Font"></select>
+              <select class="rsel" id="selSize" style="width:58px" aria-label="Font size"></select>
+              <button class="fmt sm" id="btnGrow" title="Increase font size (Ctrl+])"><span data-i="grow"></span></button>
+              <button class="fmt sm" id="btnShrink" title="Decrease font size (Ctrl+[)"><span data-i="shrink"></span></button>
+              <button class="fmt sm" id="btnCase" title="Change case"><span data-i="cs"></span></button>
+              <button class="fmt sm" id="clearFmtBtn" title="Clear all formatting"><span data-i="clearfmt"></span></button>
+              <span id="swatches" hidden></span>
+            </div>
+            <div class="rline">
+              <button class="fmt sm" data-cmd="bold" title="Bold (Ctrl+B)"><b>B</b></button>
+              <button class="fmt sm" data-cmd="italic" title="Italic (Ctrl+I)"><i style="font-family:serif">I</i></button>
+              <button class="fmt sm" data-cmd="underline" title="Underline (Ctrl+U)"><u>U</u></button>
+              <button class="fmt sm" data-cmd="strikeThrough" title="Strikethrough"><s>ab</s></button>
+              <button class="fmt sm" data-cmd="subscript" title="Subscript">x<sub style="font-size:9px">2</sub></button>
+              <button class="fmt sm" data-cmd="superscript" title="Superscript">x<sup style="font-size:9px">2</sup></button>
+              <span class="sep"></span>
+              <button class="fmt sm" id="btnHilite" title="Text highlight color"><span data-i="highlight"></span><i class="cbar" id="hiBar" style="background:#ffff00"></i></button>
+              <button class="fmt sm" id="btnColor" title="Font color"><b style="font-size:14px;line-height:1">A</b><i class="cbar" id="fcBar" style="background:#c00000"></i></button>
+            </div>
+          </div><div class="rgroup-label">Font</div></div>
+
+          <div class="rgroup"><div class="rgroup-items" style="flex-direction:column;gap:4px;align-items:flex-start">
+            <div class="rline">
+              <button class="fmt sm" data-cmd="insertUnorderedList" title="Bullets"><span data-i="bullets"></span></button>
+              <button class="fmt sm" data-cmd="insertOrderedList" title="Numbering"><span data-i="numbers"></span></button>
+              <button class="fmt sm" id="btnOutdent" title="Decrease indent"><span data-i="outdent"></span></button>
+              <button class="fmt sm" id="btnIndent" title="Increase indent"><span data-i="indent"></span></button>
+              <span class="sep"></span>
+              <button class="fmt sm" id="btnMarks" title="Show / hide paragraph marks"><span data-i="para"></span></button>
+            </div>
+            <div class="rline">
+              <button class="fmt sm" data-cmd="justifyLeft" title="Align left (Ctrl+L)"><span data-i="alignL"></span></button>
+              <button class="fmt sm" data-cmd="justifyCenter" title="Center (Ctrl+E is Equation)"><span data-i="alignC"></span></button>
+              <button class="fmt sm" data-cmd="justifyRight" title="Align right"><span data-i="alignR"></span></button>
+              <button class="fmt sm" data-cmd="justifyFull" title="Justify"><span data-i="alignJ"></span></button>
+              <span class="sep"></span>
+              <button class="fmt sm" id="btnSpacing" title="Line spacing"><span data-i="spacing"></span></button>
+            </div>
+          </div><div class="rgroup-label">Paragraph</div></div>
+
+          <div class="rgroup"><div class="rgroup-items"><div class="sg" id="styleGallery"></div></div><div class="rgroup-label">Styles</div></div>
+
+          <div class="rgroup"><div class="rgroup-items"><div class="rstack">
+            <button class="tbtn" id="btnFind" title="Find (Ctrl+F)"><span data-i="find"></span>Find</button>
+            <button class="tbtn" id="btnReplace" title="Replace (Ctrl+H)"><span data-i="replace"></span>Replace</button>
+            <button class="tbtn" id="btnSelectAll" title="Select all"><span data-i="selectall"></span>Select all</button>
+          </div></div><div class="rgroup-label">Editing</div></div>
+
           <div class="rgroup"><div class="rgroup-items">
             <button class="rbtn accent" id="insertEquationBtn" title="Insert Equation (Ctrl+E)"><span class="ri" data-icon="plus" data-size="22"></span><span class="rl">Equation</span></button>
             <button class="rbtn" id="nextStepBtn" title="Next Step (Alt+N)"><span class="ri" data-icon="step" data-size="22"></span><span class="rl">Next Step</span></button>
             <button class="rbtn dd" id="snippetsBtn" title="Snippets"><span class="ri" data-icon="list" data-size="22"></span><span class="rl">Snippets</span></button>
-          </div><div class="rgroup-label">Insert</div></div>
-          <div class="rgroup"><div class="rgroup-items center">
-            <button class="fmt" data-cmd="bold" title="Bold (Ctrl+B)"><b>B</b></button>
-            <button class="fmt" data-cmd="italic" title="Italic (Ctrl+I)"><i style="font-family:serif">I</i></button>
-            <button class="fmt" data-cmd="underline" title="Underline (Ctrl+U)"><u>U</u></button>
-            <span class="sep"></span>
-            <span id="swatches"></span>
-            <button class="fmt" id="clearFmtBtn" title="Clear formatting"><span style="font-size:13px">T<sub>x</sub></span></button>
-          </div><div class="rgroup-label">Font</div></div>
-          <div class="rgroup"><div class="rgroup-items center">
-            <button class="fmt" data-cmd="justifyLeft" title="Align left"><span data-icon="alignL" data-size="16"></span></button>
-            <button class="fmt" data-cmd="justifyCenter" title="Align center"><span data-icon="alignC" data-size="16"></span></button>
-            <button class="fmt" data-cmd="justifyRight" title="Align right"><span data-icon="alignR" data-size="16"></span></button>
-            <button class="fmt" data-cmd="insertUnorderedList" title="Bullet list"><span data-icon="list" data-size="16"></span></button>
-          </div><div class="rgroup-label">Paragraph</div></div>
-          <div class="rgroup"><div class="rgroup-items">
             <button class="rbtn" id="delEqBtn" title="Delete the selected equation"><span class="ri" data-icon="trash" data-size="22"></span><span class="rl">Delete Eq.</span></button>
             <button class="rbtn" id="clearBtn" title="Clear the whole document"><span class="ri" data-icon="x" data-size="22"></span><span class="rl">Clear</span></button>
-          </div><div class="rgroup-label">Edit</div></div>
+          </div><div class="rgroup-label">Math</div></div>
         </div>
       </div>
 
+      <!-- ---------- INSERT ---------- -->
       <div id="tabInsert" class="hidden">
         <div class="ribbon-scroll">
+          <div class="rgroup"><div class="rgroup-items"><div class="rstack">
+            <button class="tbtn dd2" id="btnCover" title="Cover page"><span data-i="cover"></span>Cover Page</button>
+            <button class="tbtn" id="btnBlank" title="Blank page"><span data-i="blank"></span>Blank Page</button>
+            <button class="tbtn" id="btnPageBreak" title="Page break"><span data-i="pagebreak"></span>Page Break</button>
+          </div></div><div class="rgroup-label">Pages</div></div>
+
           <div class="rgroup"><div class="rgroup-items">
             <button class="rbtn dd" id="tableBtn" title="Insert a table"><span class="ri"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 10h18M3 15h18M9 4v16M15 4v16"/></svg></span><span class="rl">Table</span></button>
           </div><div class="rgroup-label">Tables</div></div>
+
           <div class="rgroup"><div class="rgroup-items">
+            <button class="rbtn" id="btnPicture" title="Insert a picture from your computer"><span class="ri" data-i="picture" data-s="22"></span><span class="rl">Pictures</span></button>
             <button class="rbtn accent" id="chartRibbonBtn" title="Make a chart from the table you are in"><span class="ri"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg></span><span class="rl">Chart</span></button>
-          </div><div class="rgroup-label">Charts</div></div>
+          </div><div class="rgroup-label">Illustrations</div></div>
+
+          <div class="rgroup"><div class="rgroup-items"><div class="rstack">
+            <button class="tbtn" id="btnLink" title="Insert a link (Ctrl+K)"><span data-i="link"></span>Link</button>
+            <button class="tbtn" id="btnXrefIns" title="Cross-reference"><span data-i="xref"></span>Cross-reference</button>
+          </div></div><div class="rgroup-label">Links</div></div>
+
+          <div class="rgroup"><div class="rgroup-items">
+            <button class="rbtn" id="btnHF" title="Header, footer and page numbers"><span class="ri" data-i="header" data-s="22"></span><span class="rl">Header &amp; Footer</span></button>
+            <button class="rbtn dd" id="btnPageNum" title="Page number"><span class="ri" data-i="pagenum" data-s="22"></span><span class="rl">Page Number</span></button>
+          </div><div class="rgroup-label">Header &amp; Footer</div></div>
+
+          <div class="rgroup"><div class="rgroup-items"><div class="rstack">
+            <button class="tbtn dd2" id="btnDate" title="Date and time"><span data-i="calendar"></span>Date &amp; Time</button>
+            <button class="tbtn dd2" id="btnSymbol" title="Symbol"><span data-i="omega"></span>Symbol</button>
+          </div></div><div class="rgroup-label">Text</div></div>
+
+          <div class="rgroup"><div class="rgroup-items">
+            <button class="rbtn accent" id="btnInsEq" title="Insert Equation (Ctrl+E)"><span class="ri" data-i="eq" data-s="22"></span><span class="rl">Equation</span></button>
+          </div><div class="rgroup-label">Symbols</div></div>
         </div>
       </div>
 
+      <!-- ---------- REFERENCES ---------- -->
+      <div id="tabReferences" class="hidden">
+        <div class="ribbon-scroll">
+          <div class="rgroup"><div class="rgroup-items">
+            <button class="rbtn dd" id="btnToc" title="Table of Contents, lists of figures and tables"><span class="ri" data-i="toc" data-s="22"></span><span class="rl">Contents</span></button>
+            <div class="rstack">
+              <button class="tbtn" id="btnTocUpdate" title="Update contents, numbers and citations"><span data-i="update"></span>Update</button>
+              <button class="tbtn" id="btnHnum" title="Number the headings 1, 1.1, 1.1.1"><span data-i="numbers"></span>Number headings</button>
+            </div>
+          </div><div class="rgroup-label">Table of Contents</div></div>
+
+          <div class="rgroup"><div class="rgroup-items">
+            <button class="rbtn dd" id="btnCaption" title="Insert a caption (Figure or Table)"><span class="ri" data-i="caption" data-s="22"></span><span class="rl">Insert Caption</span></button>
+            <button class="rbtn" id="btnXref" title="Cross-reference a figure, table or heading"><span class="ri" data-i="xref" data-s="22"></span><span class="rl">Cross-reference</span></button>
+          </div><div class="rgroup-label">Captions</div></div>
+
+          <div class="rgroup"><div class="rgroup-items">
+            <button class="rbtn" id="btnSources" title="Add and edit your sources"><span class="ri" data-i="sources" data-s="22"></span><span class="rl">Manage Sources</span></button>
+            <button class="rbtn dd" id="btnCite" title="Insert a citation"><span class="ri" data-i="cite" data-s="22"></span><span class="rl">Insert Citation</span></button>
+            <button class="rbtn" id="btnBib" title="Insert the bibliography"><span class="ri" data-i="bib" data-s="22"></span><span class="rl">Bibliography</span></button>
+            <div class="rstack"><span class="fld-hint" style="padding-left:6px">Style</span>
+              <select class="rsel" id="selCiteStyle" aria-label="Citation style"><option value="apa">APA 7</option><option value="harvard">Harvard</option><option value="ieee">IEEE</option></select></div>
+          </div><div class="rgroup-label">Citations &amp; Bibliography</div></div>
+        </div>
+      </div>
+
+      <!-- ---------- EQUATION ---------- -->
       <div id="tabEquation" class="hidden">
         <div class="ribbon-scroll" id="equationRow">
           <div class="rgroup"><div class="rgroup-items">
@@ -102,6 +207,7 @@
         </div>
       </div>
 
+      <!-- ---------- SYMBOLS ---------- -->
       <div id="tabSymbols" class="hidden">
         <div class="sym-toolbar" id="symChips"></div>
         <div class="sym-toolbar" style="padding-top:0"><input class="sym-search" id="symSearch" placeholder="Search symbols (e.g. alpha, leq, integral)" aria-label="Search symbols"></div>
@@ -118,9 +224,25 @@
           <div id="sheetBg"></div>
           <div id="documentArea" contenteditable="true" spellcheck="false" role="textbox" aria-multiline="true" aria-label="Document"><p><br></p></div>
           <div id="sheetUi"></div>
+          <div id="printDeco"></div>
           <div class="doc-hint">Start typing here…  Press <b>Ctrl+E</b> to insert an equation.</div>
         </main>
       </div></div>
+    </div>
+    <div id="findBar" class="no-focus-steal" hidden>
+      <div class="fb-row">
+        <input type="text" id="fbFind" placeholder="Find" aria-label="Find">
+        <span id="fbCount"></span>
+        <button id="fbPrev" type="button" title="Previous (Shift+Enter)">↑</button>
+        <button id="fbNext" type="button" title="Next (Enter)">↓</button>
+        <label class="fb-case" title="Match case"><input type="checkbox" id="fbCase">Aa</label>
+        <button id="fbClose" type="button" title="Close (Esc)">✕</button>
+      </div>
+      <div class="fb-row" id="fbRepRow" hidden>
+        <input type="text" id="fbRep" placeholder="Replace with" aria-label="Replace with">
+        <button class="btn" id="fbRepOne" type="button">Replace</button>
+        <button class="btn" id="fbRepAll" type="button">All</button>
+      </div>
     </div>
     <aside id="solvePanel" class="no-focus-steal" aria-label="Step-by-step solution">
       <div class="sol-head">
@@ -197,7 +319,7 @@
       <div class="seg"><button data-layout-set="print">Print</button><button data-layout-set="web">Web</button></div></div>
     <div class="d-row"><span>Page size</span>
       <div class="seg"><button data-size-set="A4">A4</button><button data-size-set="Letter">Letter</button></div></div>
-          <div class="d-row"><span>Copy to Word as</span>
+    <div class="d-row"><span>Copy to Word as</span>
       <div class="seg"><button data-copy-mode="equation">Equation</button><button data-copy-mode="image">Image</button></div></div>
     <div class="d-row"><span>Dark mode</span><button class="switch" id="themeSwitch" title="Dark mode" role="switch" aria-label="Dark mode"></button></div>
 
@@ -228,13 +350,18 @@
   <div class="modal-card">
     <h3>Keyboard shortcuts</h3>
     <div class="kb-row"><span>Insert equation</span><kbd>Ctrl + E</kbd></div>
+    <div class="kb-row"><span>Find / Replace</span><kbd>Ctrl + F</kbd> <kbd>Ctrl + H</kbd></div>
+    <div class="kb-row"><span>Insert link</span><kbd>Ctrl + K</kbd></div>
+    <div class="kb-row"><span>Bigger / smaller font</span><kbd>Ctrl + ]</kbd> <kbd>Ctrl + [</kbd></div>
     <div class="kb-row"><span>Next step (Step N:)</span><kbd>Alt + N</kbd></div>
+    <div class="kb-row"><span>Solve the equation step by step</span><kbd>Alt + S</kbd></div>
     <div class="kb-row"><span>Exit equation (cursor goes to text)</span><kbd>Ctrl + Enter</kbd></div>
     <div class="kb-row"><span>Copy document as image</span><kbd>Ctrl + Shift + C</kbd></div>
     <div class="kb-row"><span>Copy equations as LaTeX</span><kbd>Ctrl + Shift + L</kbd></div>
     <div class="kb-row"><span>Print (opens PDF)</span><kbd>Ctrl + P</kbd></div>
     <div class="kb-row"><span>Undo / Redo</span><kbd>Ctrl + Z</kbd> <kbd>Ctrl + Y</kbd></div>
     <div class="kb-row"><span>Zoom in / out / reset</span><kbd>Ctrl + =</kbd> <kbd>Ctrl + -</kbd> <kbd>Ctrl + 0</kbd></div>
+    <div class="kb-row"><span>Next / previous table cell</span><kbd>Tab</kbd> <kbd>Shift + Tab</kbd></div>
     <div class="kb-row"><span>Close menus</span><kbd>Esc</kbd></div>
     <h3 style="margin-top:16px">Typing inside an equation</h3>
     <p class="help-text">

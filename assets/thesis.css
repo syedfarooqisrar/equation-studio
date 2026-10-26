@@ -1,0 +1,131 @@
+/* 📁 FILE: assets/thesis.css : Word-style ribbon parts, thesis styles, TOC, captions, bibliography, find bar, header/footer */
+
+/* ===== ribbon building blocks ===== */
+.rstack{display:flex;flex-direction:column;gap:1px;justify-content:center}
+.rline{display:flex;align-items:center;gap:2px}
+.rsel{height:26px;border:1px solid var(--border-strong);border-radius:var(--r-sm);background:var(--surface);color:var(--text);font:inherit;font-size:12px;padding:0 4px;outline:none}
+.rsel:focus{border-color:var(--accent);box-shadow:var(--ring)}
+.fmt.sm{min-width:26px;height:26px;padding:0 5px;position:relative}
+.fmt.sm.on{background:var(--accent-soft);color:var(--accent)}
+.fmt .cbar{position:absolute;left:5px;right:5px;bottom:2px;height:3px;border-radius:1px;background:var(--faint)}
+.tbtn{display:flex;align-items:center;gap:7px;height:25px;padding:0 8px;border:0;border-radius:var(--r-sm);background:transparent;color:var(--text);font:inherit;font-size:12px;cursor:pointer;white-space:nowrap;text-align:left}
+.tbtn:hover{background:var(--surface-2)}
+.tbtn.on{background:var(--accent-soft);color:var(--accent)}
+.tbtn.dd2::after{content:"";border-left:3px solid transparent;border-right:3px solid transparent;border-top:4px solid currentColor;opacity:.6;margin-left:2px}
+.sg{display:flex;gap:4px;max-width:500px;overflow-x:auto;padding:2px}
+.sc{flex:none;width:86px;height:56px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:2px;overflow:hidden}
+.sc:hover{border-color:var(--accent-border);background:var(--accent-soft)}
+.sc.active{border-color:var(--accent);box-shadow:var(--ring)}
+.sc .sa{line-height:1.1;white-space:nowrap;color:var(--text)}
+.sc .sn{font-size:10px;color:var(--muted)}
+.pal{display:grid;grid-template-columns:repeat(8,22px);gap:4px}
+.pc{width:22px;height:22px;border:1px solid var(--border-strong);border-radius:3px;cursor:pointer;padding:0}
+.pc:hover{transform:scale(1.12)}
+.pal-none{margin-top:8px;font-size:12px}
+.symg{display:grid;grid-template-columns:repeat(10,32px);gap:3px}
+
+/* ===== document defaults: Print Layout = thesis look ===== */
+html[data-layout="print"] #documentArea{font-family:"Times New Roman",Times,serif;font-size:12pt;line-height:1.5}
+html[data-layout="print"] .doc-hint{font-size:12pt;line-height:1.5}
+#documentArea{counter-reset:h1 h2 h3 fig tab}
+#documentArea h1,#documentArea h2,#documentArea h3{font-family:inherit;font-weight:700;line-height:1.3;margin:1.1em 0 .45em}
+#documentArea h1{font-size:1.33em}
+#documentArea h2{font-size:1.17em}
+#documentArea h3{font-size:1em;font-style:italic}
+.eq-title{font-size:1.67em;font-weight:700;text-align:center;margin:0 0 .6em;line-height:1.25}
+.eq-subtitle{font-size:1.17em;text-align:center;color:#555;margin:0 0 .6em}
+.eq-quote{font-style:italic;margin-left:48px;margin-right:48px;padding-left:12px;border-left:3px solid var(--border-strong)}
+.eq-nospace{margin:0!important;line-height:1.15}
+.eq-caption{font-size:.83em;text-align:center;margin:.3em 0 .9em;line-height:1.35}
+#documentArea a{color:#0563c1;text-decoration:underline}
+p.eq-figure{text-align:center;margin:8px 0;line-height:0}
+img.eq-img{max-width:100%;height:auto;display:inline-block}
+
+/* automatic numbers */
+html.hnum #documentArea h1{counter-increment:h1;counter-reset:h2 h3}
+html.hnum #documentArea h1::before{content:counter(h1) ".  "}
+html.hnum #documentArea h2{counter-increment:h2;counter-reset:h3}
+html.hnum #documentArea h2::before{content:counter(h1) "." counter(h2) "  "}
+html.hnum #documentArea h3{counter-increment:h3}
+html.hnum #documentArea h3::before{content:counter(h1) "." counter(h2) "." counter(h3) "  "}
+p.eq-caption[data-cap="figure"]::before{counter-increment:fig;content:"Figure " counter(fig) ": ";font-weight:700}
+p.eq-caption[data-cap="table"]::before{counter-increment:tab;content:"Table " counter(tab) ": ";font-weight:700}
+
+/* show / hide paragraph marks */
+html.marks #documentArea p::after,html.marks #documentArea h1::after,html.marks #documentArea h2::after,html.marks #documentArea h3::after{content:"\00b6";color:#7aa;opacity:.7;font-size:.8em;margin-left:2px;font-weight:400;font-style:normal}
+
+/* page break */
+.eq-pagebreak{height:0;margin:0;border-top:1px dashed var(--border-strong);position:relative;line-height:0;clear:both;user-select:none}
+.eq-pagebreak::after{content:"Page Break";position:absolute;left:50%;top:-8px;transform:translateX(-50%);font:600 10px var(--font);color:var(--faint);background:var(--surface);padding:0 8px;line-height:16px}
+
+/* contents, lists of figures/tables, bibliography */
+.eq-toc,.eq-bib{margin:0 0 14pt;line-height:1.5;user-select:none}
+.eq-toc-title{font-size:1.33em;font-weight:700;margin:0 0 .5em}
+.eq-toc-row{display:flex;align-items:baseline;gap:6px;cursor:pointer}
+.eq-toc-row .tt{flex:0 1 auto;min-width:0}
+.eq-toc-row .td{flex:1;border-bottom:1px dotted #888;transform:translateY(-3px);min-width:12px}
+.eq-toc-row .tp{flex:none}
+.eq-toc-row.l2{padding-left:24px}
+.eq-toc-row.l3{padding-left:48px}
+.eq-toc-row:hover .tt{color:var(--accent)}
+.eq-toc-empty{color:var(--faint);font-style:italic}
+.eq-bib-row{padding-left:36px;text-indent:-36px;margin:0 0 .5em}
+.eq-cite,.eq-xref{cursor:pointer;border-radius:3px}
+.eq-cite:hover,.eq-xref:hover{background:var(--accent-soft)}
+
+/* header / footer rows (on each sheet, and in the PDF) */
+.sheet-hf{position:absolute;left:72px;right:72px;display:grid;grid-template-columns:1fr auto 1fr;gap:12px;font:10pt "Times New Roman",Times,serif;color:#555;pointer-events:none;line-height:1.2}
+.sheet-hf .c{text-align:center}
+.sheet-hf .r{text-align:right}
+.sheet-hf.h{top:40px}
+.sheet-hf.f{bottom:40px}
+#printDeco{display:none}
+
+/* find bar */
+#findBar{position:absolute;top:8px;right:26px;z-index:30;display:flex;flex-direction:column;gap:6px;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--r-md);box-shadow:var(--sh-lg);padding:8px}
+#findBar[hidden],.fb-row[hidden]{display:none}
+.fb-row{display:flex;align-items:center;gap:4px}
+.fb-row input[type=text]{height:28px;width:200px;border:1px solid var(--border-strong);border-radius:var(--r-sm);background:var(--surface-2);color:var(--text);font:inherit;font-size:12.5px;padding:0 8px;outline:none}
+.fb-row input[type=text]:focus{border-color:var(--accent);background:var(--surface);box-shadow:var(--ring)}
+.fb-row button{height:26px;min-width:26px;border:0;border-radius:var(--r-sm);background:transparent;color:var(--text);cursor:pointer;font:inherit;font-size:13px}
+.fb-row button:hover{background:var(--surface-2)}
+.fb-row .btn{height:26px;font-size:12px;padding:0 10px;border:1px solid var(--border-strong)}
+#fbCount{min-width:56px;font-size:11.5px;color:var(--muted);text-align:center}
+.fb-case{display:flex;align-items:center;gap:3px;font-size:11.5px;color:var(--muted);cursor:pointer}
+::highlight(eqfind){background:#ffe58f;color:#000}
+::highlight(eqfind-cur){background:#ff9632;color:#000}
+
+/* dialogs */
+.eqmodal-card .fld{display:flex;flex-direction:column;gap:4px;margin:9px 0;font-size:12.5px}
+.eqmodal-card .fld input,.eqmodal-card .fld textarea,.eqmodal-card .fld select{width:100%;height:auto;min-height:30px;border:1px solid var(--border-strong);border-radius:var(--r-sm);background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;padding:5px 8px;outline:none}
+.eqmodal-card .fld input:focus,.eqmodal-card .fld textarea:focus,.eqmodal-card .fld select:focus{border-color:var(--accent);background:var(--surface);box-shadow:var(--ring)}
+.eqmodal-card .fld-check{justify-content:flex-start;gap:8px;margin:8px 0}
+.fld-hint{color:var(--faint);font-size:11px}
+.xr-list{max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r-md);margin:8px 0}
+.xr-item{padding:7px 10px;cursor:pointer;font-size:12.5px;display:flex;gap:8px}
+.xr-item:hover{background:var(--accent-soft)}
+.xr-item b{flex:none;min-width:70px;color:var(--accent)}
+.srcm-card{width:720px!important}
+.srcm{display:grid;grid-template-columns:210px 1fr;gap:14px;min-height:340px}
+.srcm-list{display:flex;flex-direction:column;gap:6px;border-right:1px solid var(--border);padding-right:10px;overflow-y:auto;max-height:420px}
+.srcm-item{padding:6px 8px;border-radius:var(--r-sm);cursor:pointer;font-size:12px;line-height:1.3;border:1px solid transparent}
+.srcm-item:hover{background:var(--surface-2)}
+.srcm-item.on{background:var(--accent-soft);border-color:var(--accent-border)}
+.srcm-form{max-height:420px;overflow-y:auto;padding-right:4px}
+.srcm-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* ===== capture / print ===== */
+html.cap .eq-pagebreak{border-top-color:transparent}
+html.cap .eq-pagebreak::after,html.cap #findBar{display:none!important}
+html.cap.marks #documentArea p::after,html.cap.marks #documentArea h1::after,html.cap.marks #documentArea h2::after,html.cap.marks #documentArea h3::after{content:none}
+@media print{
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #findBar,.fb-row{display:none!important}
+  .eq-pagebreak{border:0}
+  .eq-pagebreak::after{content:none}
+  html.marks #documentArea p::after,html.marks #documentArea h1::after{content:none}
+  .eq-bib-row,.eq-toc-row,.eq-caption,h1,h2,h3{break-inside:avoid}
+  html.pm #documentArea{padding:72px!important;font-family:"Times New Roman",Times,serif!important;font-size:12pt!important;line-height:1.5!important;box-sizing:border-box!important;position:relative!important}
+  html.pm #printDeco{display:block;position:absolute;left:0;top:0;width:100%;height:0}
+  html.pm .sheet-hf{color:#444}
+}

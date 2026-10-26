@@ -114,15 +114,32 @@ document.addEventListener('contextmenu', e => { if (!e.target.closest('#document
 }));
 
 /* ===================== 4. Sanitizer (saved HTML is untrusted) ===================== */
-const ALLOWED_TAGS = new Set(['P','BR','B','STRONG','I','EM','U','UL','OL','LI','SPAN','DIV','SUB','SUP','MATH-FIELD','TABLE','TBODY','THEAD','TR','TD','TH','CANVAS']);
-const STYLE_OK = new Set(['color','background-color','font-weight','font-style','text-decoration','text-decoration-line','text-align']);
+const ALLOWED_TAGS = new Set(['P','BR','B','STRONG','I','EM','U','S','STRIKE','UL','OL','LI','SPAN','DIV','SUB','SUP','MATH-FIELD','TABLE','TBODY','THEAD','TR','TD','TH','CANVAS','H1','H2','H3','A','IMG']);
+const STYLE_OK = new Set(['color','background-color','font-weight','font-style','text-decoration','text-decoration-line','text-align','font-family','font-size','line-height','margin-left','margin-top','margin-bottom','text-indent','width','max-width']);
 function filterStyle(css){
   return css.split(';').map(d => d.trim()).filter(d => {
     const i = d.indexOf(':');
     if (i < 1) return false;
     const prop = d.slice(0, i).trim().toLowerCase(), val = d.slice(i + 1).trim();
-    return STYLE_OK.has(prop) && /^[\w\s#%.,()+-]+$/.test(val) && !/url\s*\(|expression|javascript/i.test(val);
+    if (!STYLE_OK.has(prop) || /url\s*\(|expression|javascript|@import/i.test(val)) return false;
+    return prop === 'font-family' ? /^[\w\s,"'-]+$/.test(val) : /^[\w\s#%.,()+-]+$/.test(val);
   }).join('; ');
+}
+const DATA_OK = {
+  'data-toc': /^(toc|figure|table)$/, 'data-bib': /^1$/, 'data-pb': /^1$/, 'data-cap': /^(figure|table)$/,
+  'data-id': /^[a-z0-9]{4,12}$/, 'data-ref': /^[a-z0-9]{4,12}$/, 'data-src': /^[a-z0-9]{4,12}$/
+};
+function attrOk(el, n, v){
+  const t = el.tagName;
+  if (n === 'value') return t === 'MATH-FIELD';
+  if (n === 'class') return /^eq-[a-z0-9 -]{0,40}$/.test(v);
+  if (n === 'data-chart') return t === 'DIV' && v.length < 60000;
+  if (n === 'contenteditable') return v === 'false' && (t === 'DIV' || t === 'SPAN');
+  if (n === 'colspan' || n === 'rowspan') return /^\d{1,2}$/.test(v);
+  if (n === 'href') return t === 'A' && /^(https?:\/\/|mailto:)[^\s"'<>]{1,500}$/i.test(v);
+  if (n === 'src') return t === 'IMG' && v.length < 3000000 && /^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+\/=]+$/.test(v);
+  if (n === 'alt') return t === 'IMG' && v.length < 200;
+  return !!(DATA_OK[n] && DATA_OK[n].test(v));
 }
 function sanitizeHtml(html){
   const tpl = document.createElement('template');          // inert: nothing runs or loads while we clean it
@@ -134,14 +151,10 @@ function sanitizeHtml(html){
       [...ch.attributes].forEach(a => {
         const n = a.name.toLowerCase();
         if (n === 'style'){ const f = filterStyle(a.value); if (f) ch.setAttribute('style', f); else ch.removeAttribute('style'); }
-        else if (n === 'value' && ch.tagName === 'MATH-FIELD') { /* keep */ }
-        else if (n === 'class' && /^eq-[a-z0-9 -]{0,40}$/.test(a.value)) { /* keep: table / chart marker */ }
-        else if (n === 'data-chart' && ch.tagName === 'DIV' && a.value.length < 60000) { /* keep: validated again when drawn */ }
-        else if (n === 'contenteditable' && a.value === 'false' && ch.tagName === 'DIV') { /* keep */ }
-        else if ((n === 'colspan' || n === 'rowspan') && /^\d{1,2}$/.test(a.value)) { /* keep */ }
-        else ch.removeAttribute(a.name);
+        else if (!attrOk(ch, n, a.value)) ch.removeAttribute(a.name);
       });
-      if (ch.tagName === 'MATH-FIELD') ch.textContent = '';
+      const cls = ch.getAttribute('class') || '';
+      if (ch.tagName === 'MATH-FIELD' || (ch.tagName === 'DIV' && /^eq-(toc|bib|chart)$/.test(cls))) ch.textContent = '';   // rebuilt after loading
       else clean(ch);
     });
   };
@@ -197,7 +210,7 @@ window.addEventListener('beforeunload', () => { try { saveNow(); } catch(e){} })
 
 /* Stats */
 function plainText(){ return (doc.innerText || '').replace(/\u200B/g, '').replace(/\u00A0/g, ' '); }
-function isEmpty(){ return !doc.querySelector('math-field,table,.eq-chart') && !plainText().trim(); }
+function isEmpty(){ return !doc.querySelector('math-field,table,.eq-chart,img,.eq-toc,.eq-bib,.eq-pagebreak') && !plainText().trim(); }
 function docCounts(){
   const txt = plainText();
   return { eq: $$('math-field', doc).length, words: txt.trim().split(/\s+/).filter(Boolean).length, chars: txt.replace(/\s/g, '').length };
@@ -624,10 +637,10 @@ on($('#ribbonToggle'), 'click', () => setRibbonCollapsed(!$('#ribbon').classList
 $$('.tab').forEach(t => on(t, 'click', () => {
   if ($('#ribbon').classList.contains('collapsed')) setRibbonCollapsed(false);
   $$('.tab').forEach(x => { const a = x === t; x.classList.toggle('active', a); x.setAttribute('aria-selected', String(a)); });
-  $('#tabHome').classList.toggle('hidden', t.dataset.tab !== 'home');
-  $('#tabEquation').classList.toggle('hidden', t.dataset.tab !== 'equation');
-  $('#tabSymbols').classList.toggle('hidden', t.dataset.tab !== 'symbols');
-  const tabIns = $('#tabInsert'); if (tabIns) tabIns.classList.toggle('hidden', t.dataset.tab !== 'insert');
+  ['home', 'insert', 'references', 'equation', 'symbols'].forEach(n => {
+    const p = $('#tab' + n.charAt(0).toUpperCase() + n.slice(1));
+    if (p) p.classList.toggle('hidden', t.dataset.tab !== n);
+  });
   closeAllDropdowns();
 }));
 
@@ -811,45 +824,79 @@ function applyScale(){
     sizer.style.width = ''; sizer.style.height = '';
   }
 }
-/* Whole blocks that would cross a page bottom are pushed onto the next page */
+/* Whole blocks that would cross a page bottom move to the next page. gap = space between sheets on screen,
+   or 0 when laying out for the PDF, so the PDF breaks at the same places as the screen. */
+function layoutBlocks(gap){
+  const g = geo(), S = g.H + gap;
+  const kids = [...doc.children];
+  const rules = [], pages = [];
+  let shift = 0, prevBottom = PAGE_M, maxBottom = PAGE_M, breakPage = -1;
+  kids.forEach((el, i) => {
+    const h = el.offsetHeight;
+    let top = el.offsetTop + shift;
+    let page = Math.floor(top / S);
+    const nx = kids[i + 1];
+    const need = h + (/^H[1-3]$/.test(el.tagName) && nx ? Math.min(nx.offsetHeight, 70) : 0);   // a heading stays with what follows
+    const pushTo = np => {
+      const nt = np * S + PAGE_M;
+      rules.push(`#documentArea > :nth-child(${i + 1}){margin-top:${Math.max(0, nt - prevBottom)}px}`);
+      shift += nt - top; top = nt; page = np;
+    };
+    if (top + need > page * S + g.H - PAGE_M + 0.5 && top > page * S + PAGE_M + 0.5) pushTo(page + 1);
+    if (breakPage >= 0 && page <= breakPage) pushTo(breakPage + 1);                              // after a page break
+    breakPage = el.classList.contains('eq-pagebreak') ? page : -1;
+    pages[i] = Math.floor(top / S);
+    prevBottom = top + h;
+    if (prevBottom > maxBottom) maxBottom = prevBottom;
+  });
+  return { rules, pages, maxBottom };
+}
 function paginate(){
   if (layout !== 'print'){
     pgStyle.textContent = ''; doc.style.height = '';
     pageCount = 1; pagesHeight = 0; sheetKey = ''; kidPage = [];
     applyScale(); updatePageIndicator();
+    if (window.eqAfterPaginate) window.eqAfterPaginate();
     return;
   }
   const g = geo();
   pgStyle.textContent = '';                                 // measure the natural layout first
-  const kids = [...doc.children];
-  const rules = [];
-  kidPage = [];
-  let shift = 0, prevBottom = PAGE_M, maxBottom = PAGE_M;
-  kids.forEach((el, i) => {
-    const h = el.offsetHeight;
-    let top = el.offsetTop + shift;
-    const page = Math.floor(top / g.S);
-    const cTop = page * g.S + PAGE_M, cBot = page * g.S + g.H - PAGE_M;
-    if (top + h > cBot + 0.5 && top > cTop + 0.5){
-      const newTop = (page + 1) * g.S + PAGE_M;
-      rules.push(`#documentArea > :nth-child(${i + 1}){margin-top:${Math.max(0, newTop - prevBottom)}px}`);
-      shift += newTop - top;
-      top = newTop;
-    }
-    kidPage[i] = Math.floor(top / g.S);
-    prevBottom = top + h;
-    if (prevBottom > maxBottom) maxBottom = prevBottom;
-  });
-  pgStyle.textContent = rules.length ? `@media screen{${rules.join('')}}` : '';
-  pageCount = Math.max(1, Math.floor((maxBottom - 1) / g.S) + 1);
+  const L = layoutBlocks(PAGE_GAP);
+  kidPage = L.pages;
+  pgStyle.textContent = L.rules.length ? `@media screen{${L.rules.join('')}}` : '';
+  pageCount = Math.max(1, Math.floor((L.maxBottom - 1) / g.S) + 1);
   pagesHeight = pageCount * g.H + (pageCount - 1) * PAGE_GAP;
   doc.style.height = pagesHeight + 'px';
   buildSheets(g);
   applyScale();
-  observeKids(kids);
+  observeKids([...doc.children]);
   updatePageIndicator();
   if ($('#drawer').classList.contains('open')) refreshInfo();
+  if (window.eqAfterPaginate) window.eqAfterPaginate();
 }
+/* PDF: same breaks as the screen, no gaps between pages (used by main.py before printToPdf) */
+const printStyle = document.createElement('style');
+document.head.appendChild(printStyle);
+window.preparePrint = function(){
+  if (layout !== 'print') return false;
+  try {
+    const g = geo();
+    pgStyle.textContent = '';
+    const L = layoutBlocks(0);
+    const n = Math.max(1, Math.floor((L.maxBottom - 1) / g.H) + 1);
+    printStyle.textContent = L.rules.length ? `@media print{${L.rules.join('')}}` : '';
+    doc.style.height = (n * g.H) + 'px';
+    root.classList.add('pm');
+    if (window.eqRenderPrintDeco) window.eqRenderPrintDeco(n, g);
+    return true;
+  } catch (e) { reportError('print', e); window.restorePrint(); return false; }
+};
+window.restorePrint = function(){
+  printStyle.textContent = '';
+  root.classList.remove('pm');
+  if (window.eqClearPrintDeco) window.eqClearPrintDeco();
+  schedulePaginate();
+};
 let pgRaf = 0;
 function schedulePaginate(){
   if (pgRaf) return;
