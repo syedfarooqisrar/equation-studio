@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="assets/solver.css">
 <link rel="stylesheet" href="assets/tables-charts.css">
 <link rel="stylesheet" href="assets/thesis.css">
+<link rel="stylesheet" href="assets/thesis2.css">
 <script src="mathlive.min.js"></script>
 <script src="assets/mathlive-config.js"></script>
 <script src="assets/equation-data.js" defer></script>
@@ -21,7 +22,10 @@
 <script src="assets/charts.js" defer></script>
 <script src="assets/home.js" defer></script>
 <script src="assets/insert.js" defer></script>
+<script src="assets/thesis-core.js" defer></script>
 <script src="assets/references.js" defer></script>
+<script src="assets/thesis2.js" defer></script>
+<script src="assets/thesis-nav.js" defer></script>
 <style id="pgStyle"></style>
 </head>
 <body>
@@ -49,6 +53,7 @@
       <button class="tab active" data-tab="home" role="tab" aria-selected="true">Home</button>
       <button class="tab" data-tab="insert" role="tab" aria-selected="false">Insert</button>
       <button class="tab" data-tab="references" role="tab" aria-selected="false">References</button>
+      <button class="tab" data-tab="thesis" role="tab" aria-selected="false">Thesis</button>
       <button class="tab" data-tab="equation" role="tab" aria-selected="false">Equation</button>
       <button class="tab" data-tab="symbols" role="tab" aria-selected="false">Symbols</button>
       <button class="icon-btn" id="ribbonToggle" title="Collapse / expand ribbon"></button>
@@ -134,6 +139,7 @@
             <button class="tbtn dd2" id="btnCover" title="Cover page"><span data-i="cover"></span>Cover Page</button>
             <button class="tbtn" id="btnBlank" title="Blank page"><span data-i="blank"></span>Blank Page</button>
             <button class="tbtn" id="btnPageBreak" title="Page break"><span data-i="pagebreak"></span>Page Break</button>
+            <button class="tbtn dd2" id="btnSection" title="Section break: change the page numbering"><span data-x="section"></span>Section Break</button>
           </div></div><div class="rgroup-label">Pages</div></div>
 
           <div class="rgroup"><div class="rgroup-items">
@@ -162,7 +168,9 @@
 
           <div class="rgroup"><div class="rgroup-items">
             <button class="rbtn accent" id="btnInsEq" title="Insert Equation (Ctrl+E)"><span class="ri" data-i="eq" data-s="22"></span><span class="rl">Equation</span></button>
-          </div><div class="rgroup-label">Symbols</div></div>
+            <button class="rbtn dd" id="btnNumEq" title="Numbered equation, like (2.1)"><span class="ri" data-x="numeq" data-s="22"></span><span class="rl">Numbered Eq.</span></button>
+            <button class="rbtn dd" id="btnTheo" title="Theorem, Lemma, Definition, Proof…"><span class="ri" data-x="theorem" data-s="22"></span><span class="rl">Theorem</span></button>
+          </div><div class="rgroup-label">Math blocks</div></div>
         </div>
       </div>
 
@@ -189,6 +197,38 @@
             <div class="rstack"><span class="fld-hint" style="padding-left:6px">Style</span>
               <select class="rsel" id="selCiteStyle" aria-label="Citation style"><option value="apa">APA 7</option><option value="harvard">Harvard</option><option value="ieee">IEEE</option></select></div>
           </div><div class="rgroup-label">Citations &amp; Bibliography</div></div>
+
+          <div class="rgroup"><div class="rgroup-items">
+            <button class="rbtn" id="btnFootnote" title="Insert a footnote"><span class="ri" data-x="footnote" data-s="22"></span><span class="rl">Insert Footnote</span></button>
+            <button class="rbtn" id="btnNotesList" title="Insert the list of notes"><span class="ri" data-x="theorem" data-s="22"></span><span class="rl">Notes List</span></button>
+          </div><div class="rgroup-label">Footnotes</div></div>
+
+          <div class="rgroup"><div class="rgroup-items">
+            <button class="rbtn" id="btnAbbrEdit" title="Add and edit abbreviations"><span class="ri" data-x="abbr" data-s="22"></span><span class="rl">Abbreviations…</span></button>
+            <button class="rbtn" id="btnAbbrList" title="Insert the List of Abbreviations"><span class="ri" data-x="theorem" data-s="22"></span><span class="rl">List of Abbrev.</span></button>
+            <button class="rbtn" id="btnSymEdit" title="Add and edit symbols"><span class="ri" data-x="symbol" data-s="22"></span><span class="rl">Symbols…</span></button>
+            <button class="rbtn" id="btnSymList" title="Insert the List of Symbols"><span class="ri" data-x="theorem" data-s="22"></span><span class="rl">List of Symbols</span></button>
+          </div><div class="rgroup-label">Lists</div></div>
+        </div>
+      </div>
+
+      <!-- ---------- THESIS ---------- -->
+      <div id="tabThesis" class="hidden">
+        <div class="ribbon-scroll">
+          <div class="rgroup"><div class="rgroup-items">
+            <button class="rbtn" id="btnNav" title="Navigation pane: headings, move chapters"><span class="ri" data-x="nav" data-s="22"></span><span class="rl">Navigation</span></button>
+            <button class="rbtn" id="btnDash" title="Word counts, goals and progress"><span class="ri" data-x="dash" data-s="22"></span><span class="rl">Dashboard</span></button>
+            <button class="rbtn accent" id="btnCheck" title="Find missing captions, uncited sources, repeated words…"><span class="ri" data-x="check" data-s="22"></span><span class="rl">Thesis Check</span></button>
+          </div><div class="rgroup-label">Review</div></div>
+          <div class="rgroup"><div class="rgroup-items">
+            <button class="rbtn" id="btnPageSetup" title="Margins and line spacing"><span class="ri" data-x="setup" data-s="22"></span><span class="rl">Page Setup</span></button>
+            <button class="rbtn dd" id="btnFront" title="Declaration, certificate, acknowledgements, abstract, dedication"><span class="ri" data-x="front" data-s="22"></span><span class="rl">Front Matter</span></button>
+            <button class="rbtn" id="btnFocus" title="Hide everything except the page"><span class="ri" data-x="focus" data-s="22"></span><span class="rl">Focus</span></button>
+          </div><div class="rgroup-label">Document</div></div>
+          <div class="rgroup"><div class="rgroup-items">
+            <button class="rbtn" id="btnSaveProj" title="Save a backup file (.eqproj)"><span class="ri" data-x="saveproj" data-s="22"></span><span class="rl">Save project</span></button>
+            <button class="rbtn" id="btnOpenProj" title="Open a project file"><span class="ri" data-x="openproj" data-s="22"></span><span class="rl">Open project</span></button>
+          </div><div class="rgroup-label">Project file</div></div>
         </div>
       </div>
 
@@ -218,6 +258,16 @@
 
   <!-- ===== Document area ===== -->
   <div id="wsShell">
+    <aside id="navPanel" class="no-focus-steal" aria-label="Navigation">
+      <div class="nav-tabs">
+        <button type="button" data-nt="outline" class="on">Headings</button>
+        <button type="button" data-nt="dash">Dashboard</button>
+        <button type="button" data-nt="check">Check</button>
+        <span class="spacer"></span>
+        <button type="button" id="navClose" title="Close" aria-label="Close">✕</button>
+      </div>
+      <div class="nav-body" id="navBody"></div>
+    </aside>
     <div id="workspace">
       <div id="pageSizer"><div id="pageScaler">
         <main class="doc-wrap is-empty" id="docWrap">
@@ -374,6 +424,6 @@
   </div>
 </div>
 
-<button id="solveFab" class="no-focus-steal" title="Solve step by step (Alt+S)" aria-label="Solve step by step"></button>
+<button id="focusPill" class="no-focus-steal" hidden>Exit focus (Esc)</button>\n<button id="solveFab" class="no-focus-steal" title="Solve step by step (Alt+S)" aria-label="Solve step by step"></button>
 </body>
 </html>

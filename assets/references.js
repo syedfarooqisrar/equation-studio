@@ -14,18 +14,20 @@
   function headingList() {
     const out = [], c = [0, 0, 0];
     $$('h1,h2,h3', doc).forEach(h => {
-      const lv = +h.tagName[1]; c[lv - 1]++; for (let k = lv; k < 3; k++) c[k] = 0;
+      const lv = +h.tagName[1];
+      if (h.classList.contains('eq-unnum')) { out.push({ el: h, level: lv, num: '', text: text(h) }); return; }
+      c[lv - 1]++; for (let k = lv; k < 3; k++) c[k] = 0;
       out.push({ el: h, level: lv, num: c.slice(0, lv).join('.'), text: text(h) });
     });
     return out;
   }
-  const captionList = kind => $$('p.eq-caption[data-cap="' + kind + '"]', doc).map((p, i) => ({ el: p, n: i + 1, kind, text: text(p) }));
+  const captionList = kind => $$('p.eq-caption[data-cap="' + kind + '"]', doc).map((p, i) => ({ el: p, n: p.getAttribute('data-num') || String(i + 1), kind, text: text(p) }));
   const capLabel = c => (c.kind === 'figure' ? 'Figure ' : 'Table ') + c.n;
   function pageOf(elm) {
     if (typeof layout === 'undefined' || layout !== 'print' || !Array.isArray(kidPage)) return '';
     let n = elm; while (n && n.parentNode !== doc) n = n.parentNode;
     const i = n ? [...doc.children].indexOf(n) : -1;
-    return (i >= 0 && kidPage[i] != null) ? String(kidPage[i] + 1) : '';
+    return (i >= 0 && kidPage[i] != null) ? String(window.eqPageLabel ? window.eqPageLabel(kidPage[i]) : kidPage[i] + 1) : '';
   }
   const ensureId = e => { let id = e.getAttribute('data-id'); if (!id) { id = uid(); e.setAttribute('data-id', id); } return id; };
 
@@ -33,7 +35,7 @@
   function renderToc(div) {
     const kind = div.getAttribute('data-toc') || 'toc';
     let title, rows;
-    if (kind === 'toc') { title = 'Table of Contents'; rows = headingList().map(h => ({ t: (hnumOn() ? h.num + '  ' : '') + h.text, lvl: h.level, el: h.el })); }
+    if (kind === 'toc') { title = 'Table of Contents'; rows = headingList().map(h => ({ t: (hnumOn() && h.num ? h.num + '  ' : '') + h.text, lvl: h.level, el: h.el })); }
     else { title = kind === 'figure' ? 'List of Figures' : 'List of Tables'; rows = captionList(kind).map(c => ({ t: capLabel(c) + ': ' + c.text, lvl: 1, el: c.el })); }
     const html = '<div class="eq-toc-title">' + title + '</div>' + (rows.length
       ? rows.map((r, i) => '<div class="eq-toc-row l' + r.lvl + '" data-i="' + i + '"><span class="tt">' + esc(r.t) + '</span><span class="td"></span><span class="tp">' + pageOf(r.el) + '</span></div>').join('')
@@ -75,14 +77,18 @@
 
   function refLabel(t) {
     if (!t) return 'Error! Reference not found.';
-    if (t.matches('p.eq-caption')) { const kind = t.getAttribute('data-cap'); const i = captionList(kind).findIndex(c => c.el === t); return (kind === 'figure' ? 'Figure ' : 'Table ') + (i + 1); }
-    if (/^H[1-3]$/.test(t.tagName)) { const h = headingList().find(x => x.el === t); return h ? (hnumOn() ? 'Section ' + h.num : h.text) : text(t); }
+    if (t.matches('p.eq-caption')) return (t.getAttribute('data-cap') === 'figure' ? 'Figure ' : 'Table ') + (t.getAttribute('data-num') || '?');
+    if (t.matches('.eq-eqn')) return '(' + (t.getAttribute('data-num') || '?') + ')';
+    if (t.matches('p.eq-th')) return (t.getAttribute('data-label') || 'Theorem').replace(/\.$/, '');
+    if (/^H[1-3]$/.test(t.tagName)) { const h = headingList().find(x => x.el === t); return h ? ((hnumOn() && h.num) ? 'Section ' + h.num : h.text) : text(t); }
     return text(t);
   }
   function openXref() {
     const items = [];
     headingList().forEach(h => items.push({ el: h.el, tag: (hnumOn() ? h.num : 'Heading ' + h.level), t: h.text }));
     ['figure', 'table'].forEach(k => captionList(k).forEach(c => items.push({ el: c.el, tag: capLabel(c), t: c.text })));
+    $$('.eq-eqn', doc).forEach(e => items.push({ el: e, tag: '(' + (e.getAttribute('data-num') || '?') + ')', t: 'Equation' }));
+    $$('p.eq-th:not(.eq-th-c)[data-num]', doc).forEach(e => items.push({ el: e, tag: (e.getAttribute('data-label') || '').replace(/\.$/, ''), t: text(e).slice(0, 70) }));
     const ov = el('div', 'eqmodal open'), card = el('div', 'eqmodal-card'); card.style.width = '460px';
     card.innerHTML = '<h3>Cross-reference</h3><div class="fld-hint">Choose what to refer to. The number updates by itself when things move.</div>';
     const list = el('div', 'xr-list');
@@ -216,7 +222,7 @@
 
   function openSources() {
     const ov = el('div', 'eqmodal open'), card = el('div', 'eqmodal-card srcm-card');
-    card.innerHTML = '<h3>Manage Sources</h3><div class="srcm"><div class="srcm-list"><div id="smList"></div><button class="btn" id="smAdd" type="button">+ Add source</button></div><div class="srcm-form" id="smForm"></div></div><div class="eqmodal-actions"><button class="btn btn-primary" id="smDone" type="button">Done</button></div>';
+    card.innerHTML = '<h3>Manage Sources</h3><div class="srcm"><div class="srcm-list"><div id="smList"></div><button class="btn" id="smAdd" type="button">+ Add source</button><button class="btn" id="smImport" type="button">Import .bib file</button></div><div class="srcm-form" id="smForm"></div></div><div class="eqmodal-actions"><button class="btn btn-primary" id="smDone" type="button">Done</button></div>';
     ov.appendChild(card); document.body.appendChild(ov);
     let sel = null; const list = card.querySelector('#smList'), form = card.querySelector('#smForm');
     const TYPES = [['book', 'Book'], ['article', 'Journal article'], ['conf', 'Conference paper'], ['thesis', 'Thesis / dissertation'], ['web', 'Website'], ['report', 'Report']];
@@ -248,6 +254,24 @@
       const src = getSources(), s = { id: uid(), type: 'book', authors: '', year: '', title: '', container: '', publisher: '', volume: '', issue: '', pages: '', url: '' };
       src.push(s); putSources(src); sel = s.id; drawList(); drawForm();
     });
+    card.querySelector('#smImport').addEventListener('click', () => {
+      const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.bib,.txt';
+      inp.addEventListener('change', () => {
+        const f = inp.files && inp.files[0]; if (!f) return;
+        const r = new FileReader();
+        r.onload = () => {
+          const list = window.eqParseBib ? window.eqParseBib(String(r.result)) : [];
+          if (!list.length) return showToast('No entries found in that file', 'warn');
+          const src = getSources(), keys = new Set(src.map(s => (s.title + '|' + s.year).toLowerCase()));
+          let n = 0;
+          list.forEach(s => { const k = (s.title + '|' + s.year).toLowerCase(); if (!keys.has(k)) { src.push(s); keys.add(k); n++; } });
+          putSources(src); sel = src.length ? src[src.length - 1].id : null; drawList(); drawForm();
+          showToast(n + ' source' + (n === 1 ? '' : 's') + ' imported');
+        };
+        r.readAsText(f);
+      });
+      inp.click();
+    });
     const done = () => { ov.remove(); updateAll(true); };
     card.querySelector('#smDone').addEventListener('click', done);
     ov.addEventListener('mousedown', e => { if (e.target === ov) done(); });
@@ -262,6 +286,8 @@
     if (updating) return;
     updating = true; changed = false;
     try {
+      if (window.eqCore) eqCore.renumber();
+      (window.eqHooks || []).forEach(f => { try { if (f()) changed = true; } catch (e) { reportError('hook', e); } });
       refreshCites();
       $$('.eq-bib', doc).forEach(d => { if (renderBib(d)) changed = true; });
       refreshXrefs();
@@ -275,11 +301,12 @@
   const schedule = () => { clearTimeout(t); t = setTimeout(updateAll, 400); };
   const mo = new MutationObserver(recs => {
     if (updating) return;
-    if (recs.every(r => r.target.nodeType === 1 && r.target.closest && r.target.closest('.eq-toc,.eq-bib'))) return;
+    if (recs.every(r => r.target.nodeType === 1 && r.target.closest && r.target.closest('.eq-toc,.eq-bib,.eq-abbr,.eq-symlist,.eq-notes'))) return;
     schedule();
   });
   mo.observe(doc, { childList: true, characterData: true, subtree: true });
   window.eqAfterPaginate = schedule;
+  window.eqUpdateAll = updateAll;
   const baseRestore = window.restoreDoc;
   if (typeof baseRestore === 'function') window.restoreDoc = function () { const r = baseRestore.apply(this, arguments); setTimeout(() => updateAll(), 0); return r; };
   updateAll();

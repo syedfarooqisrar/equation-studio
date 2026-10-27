@@ -18,7 +18,7 @@ from logging.handlers import RotatingFileHandler
 
 from PySide6.QtCore import QBuffer, QIODevice, QLockFile, QMarginsF, QSettings, Qt, QTimer, QUrl
 from PySide6.QtGui import QColor, QIcon, QImage, QPageLayout, QPageSize, QPainter
-from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile, QWebEngineSettings
+from PySide6.QtWebEngineCore import QWebEngineDownloadRequest, QWebEnginePage, QWebEngineProfile, QWebEngineSettings
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox, QVBoxLayout, QWidget
 import multiprocessing as mp
@@ -301,6 +301,7 @@ class EquationStudio(QWidget):
         self.web_view.setPage(self.page)
         harden(self.page.settings())
         self.page.pdfPrintingFinished.connect(self.on_pdf_done)
+        self.profile.downloadRequested.connect(self.on_download)
         self.page.renderProcessTerminated.connect(self.on_render_terminated)
 
         layout = QVBoxLayout(self)
@@ -650,6 +651,29 @@ class EquationStudio(QWidget):
             self.toast("PDF opened. Press Ctrl+P there to print", "warn")
         else:
             self.toast(f"Saved: {os.path.basename(path)}")
+
+    # ---------- project file (.eqproj) save ----------
+    def on_download(self, download) -> None:
+        name = os.path.basename(download.downloadFileName() or "")
+        if not name.lower().endswith(".eqproj"):  # the only download this app ever makes
+            download.cancel()
+            return
+        start = os.path.join(os.path.expanduser("~"), "Documents", name)
+        target, _ = QFileDialog.getSaveFileName(self, "Save project", start, "Equation Studio project (*.eqproj)")
+        if not target:
+            download.cancel()
+            return
+        download.setDownloadDirectory(os.path.dirname(target))
+        download.setDownloadFileName(os.path.basename(target))
+        download.stateChanged.connect(lambda state, p=target: self.on_download_state(state, p))
+        download.accept()
+
+    def on_download_state(self, state, path: str) -> None:
+        states = QWebEngineDownloadRequest.DownloadState
+        if state == states.DownloadCompleted:
+            self.toast("Project saved: " + os.path.basename(path))
+        elif state == states.DownloadInterrupted:
+            self.toast("Error: could not save the project", "error")
 
     # ---------- clean shutdown ----------
     def closeEvent(self, event) -> None:  # noqa: N802

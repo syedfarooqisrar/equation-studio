@@ -139,7 +139,10 @@
   const HF_DEF = { header: '', hAlign: 'right', footer: '', fAlign: 'left', numPos: 'none', numFmt: 'arabic', start: 1, first: false };
   let hf = Object.assign({}, HF_DEF, readJson('eqHF', {}));
   const roman = n => { let s = ''; [[1000, 'm'], [900, 'cm'], [500, 'd'], [400, 'cd'], [100, 'c'], [90, 'xc'], [50, 'l'], [40, 'xl'], [10, 'x'], [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i']].forEach(([v, r]) => { while (n >= v) { s += r; n -= v; } }); return s; };
-  const label = i => { const n = (parseInt(hf.start, 10) || 1) + i; if (hf.numFmt === 'lroman' && n > 0) return roman(n); if (hf.numFmt === 'uroman' && n > 0) return roman(n).toUpperCase(); return String(n); };
+  const fmtNum = (n, f) => { if (f === 'none') return ''; if (f === 'lroman' && n > 0) return roman(n); if (f === 'uroman' && n > 0) return roman(n).toUpperCase(); return String(n); };
+  const baseLabel = i => fmtNum((parseInt(hf.start, 10) || 1) + i, hf.numFmt);
+  const label = i => (window.eqSectionLabel ? window.eqSectionLabel(i, fmtNum, baseLabel) : baseLabel(i));
+  window.eqPageLabel = label;
   const expand = (t, i, total) => esc(t).replace(/\{page\}/g, label(i)).replace(/\{pages\}/g, total).replace(/\{date\}/g, today());
   function rowsFor(i, total) {
     if (hf.first && i === 0) return { h: '', f: '' };

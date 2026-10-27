@@ -127,13 +127,16 @@ function filterStyle(css){
 }
 const DATA_OK = {
   'data-toc': /^(toc|figure|table)$/, 'data-bib': /^1$/, 'data-pb': /^1$/, 'data-cap': /^(figure|table)$/,
-  'data-id': /^[a-z0-9]{4,12}$/, 'data-ref': /^[a-z0-9]{4,12}$/, 'data-src': /^[a-z0-9]{4,12}$/
+  'data-id': /^[a-z0-9]{4,12}$/, 'data-ref': /^[a-z0-9]{4,12}$/, 'data-src': /^[a-z0-9]{4,12}$/,
+  'data-th': /^(theorem|lemma|proposition|corollary|definition|remark|example|proof)$/, 'data-num': /^[0-9.]{1,10}$/,
+  'data-label': /^[A-Za-z0-9 .]{1,40}$/, 'data-sec': /^(arabic|lroman|uroman|none)$/, 'data-start': /^\d{1,4}$/
 };
 function attrOk(el, n, v){
   const t = el.tagName;
   if (n === 'value') return t === 'MATH-FIELD';
   if (n === 'class') return /^eq-[a-z0-9 -]{0,40}$/.test(v);
   if (n === 'data-chart') return t === 'DIV' && v.length < 60000;
+  if (n === 'data-note') return t === 'SPAN' && v.length < 1200;
   if (n === 'contenteditable') return v === 'false' && (t === 'DIV' || t === 'SPAN');
   if (n === 'colspan' || n === 'rowspan') return /^\d{1,2}$/.test(v);
   if (n === 'href') return t === 'A' && /^(https?:\/\/|mailto:)[^\s"'<>]{1,500}$/i.test(v);
@@ -154,7 +157,7 @@ function sanitizeHtml(html){
         else if (!attrOk(ch, n, a.value)) ch.removeAttribute(a.name);
       });
       const cls = ch.getAttribute('class') || '';
-      if (ch.tagName === 'MATH-FIELD' || (ch.tagName === 'DIV' && /^eq-(toc|bib|chart)$/.test(cls))) ch.textContent = '';   // rebuilt after loading
+      if (ch.tagName === 'MATH-FIELD' || (ch.tagName === 'DIV' && /^eq-(toc|bib|chart|abbr|symlist|notes)$/.test(cls))) ch.textContent = '';   // rebuilt after loading
       else clean(ch);
     });
   };
@@ -637,7 +640,7 @@ on($('#ribbonToggle'), 'click', () => setRibbonCollapsed(!$('#ribbon').classList
 $$('.tab').forEach(t => on(t, 'click', () => {
   if ($('#ribbon').classList.contains('collapsed')) setRibbonCollapsed(false);
   $$('.tab').forEach(x => { const a = x === t; x.classList.toggle('active', a); x.setAttribute('aria-selected', String(a)); });
-  ['home', 'insert', 'references', 'equation', 'symbols'].forEach(n => {
+  ['home', 'insert', 'references', 'thesis', 'equation', 'symbols'].forEach(n => {
     const p = $('#tab' + n.charAt(0).toUpperCase() + n.slice(1));
     if (p) p.classList.toggle('hidden', t.dataset.tab !== n);
   });
@@ -1047,7 +1050,9 @@ window.getCaptureInfo = function(target){
       });
       if (b > t){
         const top = Math.max(p * g.S, t - 8), bottom = Math.min(p * g.S + g.H, b + 8);
-        segs.push({ x:sx + PAGE_M - 14, y:sy + top, w:g.W - PAGE_M * 2 + 28, h:Math.ceil(bottom - top) });
+        const cs = getComputedStyle(root);
+        const ml = parseFloat(cs.getPropertyValue('--pg-ml')) || PAGE_M, mr = parseFloat(cs.getPropertyValue('--pg-mr')) || PAGE_M;
+        segs.push({ x:sx + ml - 14, y:sy + top, w:g.W - ml - mr + 28, h:Math.ceil(bottom - top) });
       }
     }
     if (segs.length) return JSON.stringify({ segments:segs, breaks:[] });
