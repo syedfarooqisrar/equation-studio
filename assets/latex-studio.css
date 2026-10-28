@@ -1,0 +1,50 @@
+/* 📁 FILE: assets/latex-studio.css : LaTeX Studio (editor + compiled pages) */
+#texStudio{display:none;position:absolute;inset:0;z-index:45;flex-direction:column;background:var(--bg)}
+.tex-open #texStudio{display:flex}
+html.cap #texStudio{display:none!important}
+.tx-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;background:var(--surface);border-bottom:1px solid var(--border);flex:none}
+.tx-bar .btn{height:30px}
+.tx-sp{flex:1}
+.tx-auto{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);cursor:pointer;white-space:nowrap}
+.tx-wd{font-size:11.5px;color:var(--muted);max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tx-main{flex:1;min-height:0;display:flex}
+.tx-edit{width:var(--tx-split,46%);min-width:240px;display:flex;background:var(--surface)}
+.tx-gutter{flex:none;width:50px;overflow:hidden;background:var(--surface-2);border-right:1px solid var(--border);color:var(--faint);font:12px/20px var(--mono);text-align:right;user-select:none}
+.tx-gutter pre{margin:0;padding:10px 8px 10px 0;font:inherit}
+.tx-gutter b{color:var(--danger);font-weight:700}
+#txCode{flex:1;min-width:0;border:0;outline:0;resize:none;background:var(--surface);color:var(--text);font:13px/20px var(--mono);padding:10px 12px;white-space:pre;overflow:auto;tab-size:2}
+.tx-split{flex:none;width:6px;cursor:col-resize;background:var(--border)}
+.tx-split:hover{background:var(--accent)}
+.tx-prev{flex:1;min-width:200px;display:flex;flex-direction:column;background:var(--ws)}
+.tx-prev-bar{display:flex;align-items:center;gap:10px;padding:6px 12px;background:var(--surface);border-bottom:1px solid var(--border);font-size:12px;color:var(--muted);flex:none}
+#txStatus{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#txStatus.err{color:var(--danger)}
+#txStatus.ok{color:var(--success)}
+.tx-pages{flex:1;min-height:0;overflow:auto;padding:16px}
+.tx-page{position:relative;margin:0 auto 16px;width:fit-content;max-width:100%;background:#fff;box-shadow:var(--sh-md)}
+.tx-page img{display:block;max-width:none}
+.tx-pn{position:absolute;right:8px;bottom:6px;font:600 10px var(--font);color:#999;background:rgba(255,255,255,.85);padding:1px 6px;border-radius:8px}
+.tx-msg{max-width:520px;margin:40px auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px 20px;font-size:13px;line-height:1.55;color:var(--text)}
+.tx-msg h4{margin:0 0 8px;font-size:15px}
+.tx-msg code{background:var(--surface-2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font:12px var(--mono)}
+.tx-msg ol{margin:8px 0 0;padding-left:20px}
+.tx-spin{width:22px;height:22px;border-radius:50%;border:3px solid var(--border-strong);border-top-color:var(--accent);animation:solspin .8s linear infinite;margin:0 0 10px}
+.tx-log{flex:none;height:var(--tx-log,170px);display:flex;flex-direction:column;border-top:1px solid var(--border);background:var(--surface)}
+.tx-log.collapsed{height:34px}
+.tx-log-head{display:flex;align-items:center;gap:4px;padding:0 8px;height:34px;flex:none;border-bottom:1px solid var(--border)}
+.tx-log-head button{border:0;background:transparent;padding:6px 10px;font:inherit;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent}
+.tx-log-head button.on{color:var(--accent);border-bottom-color:var(--accent)}
+.tx-log-body{flex:1;min-height:0;overflow:auto}
+.tx-log.collapsed .tx-log-body{display:none}
+#txProblems{padding:6px 10px}
+.tx-prob{display:flex;gap:10px;padding:5px 8px;border-radius:var(--r-sm);font-size:12.5px;cursor:pointer}
+.tx-prob:hover{background:var(--accent-soft)}
+.tx-prob b{flex:none;min-width:54px;color:var(--danger)}
+#txLogRaw{margin:0;padding:8px 12px;font:11.5px/1.45 var(--mono);color:var(--muted);white-space:pre-wrap;word-break:break-word}
+/* ---- imported LaTeX: code blocks, picture placeholders, report ---- */
+.eq-code{font-family:Consolas,"Cascadia Mono",monospace;font-size:.82em;line-height:1.4;white-space:pre-wrap;background:var(--surface-2);border:1px solid var(--border);border-radius:4px;padding:6px 10px;margin:6px 0;color:var(--text)}
+.eq-imgph{display:inline-block;border:1px dashed var(--border-strong);border-radius:6px;padding:22px 46px;color:var(--faint);font:12px var(--font);line-height:1.3}
+.imp-list{margin:6px 0 12px 18px;padding:0;font-size:12.5px;color:var(--muted);line-height:1.5}
+.imp-h{font-size:12px;font-weight:700;margin:10px 0 2px;color:var(--text)}
+html.cap .eq-code{background:#f6f6f6;border-color:#ddd;color:#111}
+@media print{.eq-code{background:#f6f6f6!important;color:#111!important}}

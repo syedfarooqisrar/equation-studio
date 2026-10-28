@@ -115,7 +115,7 @@ document.addEventListener('contextmenu', e => { if (!e.target.closest('#document
 
 /* ===================== 4. Sanitizer (saved HTML is untrusted) ===================== */
 const ALLOWED_TAGS = new Set(['P','BR','B','STRONG','I','EM','U','S','STRIKE','UL','OL','LI','SPAN','DIV','SUB','SUP','MATH-FIELD','TABLE','TBODY','THEAD','TR','TD','TH','CANVAS','H1','H2','H3','A','IMG']);
-const STYLE_OK = new Set(['color','background-color','font-weight','font-style','text-decoration','text-decoration-line','text-align','font-family','font-size','line-height','margin-left','margin-top','margin-bottom','text-indent','width','max-width']);
+const STYLE_OK = new Set(['color','background-color','font-weight','font-style','text-decoration','text-decoration-line','text-align','font-family','font-size','line-height','margin-left','margin-top','margin-bottom','text-indent','width','max-width','font-variant','text-transform','letter-spacing','border-bottom','border-top','padding-bottom','padding-left','margin-right']);
 function filterStyle(css){
   return css.split(';').map(d => d.trim()).filter(d => {
     const i = d.indexOf(':');

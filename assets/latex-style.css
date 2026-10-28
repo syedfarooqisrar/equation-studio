@@ -1,0 +1,24 @@
+/* 📁 FILE: assets/latex-style.css : the "LaTeX look" (applies only while html.lx is on) + \hfill rows */
+.eq-hfl{display:flex;justify-content:space-between;align-items:baseline;gap:1em}
+.eq-hfl > span:last-child:not(:first-child){text-align:right;margin-left:auto}
+
+html.lx #documentArea{hyphens:auto;-webkit-hyphens:auto}
+html.lx[data-layout="print"] #documentArea{font-family:var(--lx-ff,"Latin Modern Roman",Cambria,"Times New Roman",serif);font-size:var(--lx-fs,12pt);line-height:var(--lx-lh,1.2)}
+html.lx #documentArea h1{font-size:var(--lx-h1,17pt);font-weight:700;margin:1.35em 0 .6em;line-height:1.2}
+html.lx #documentArea h2{font-size:var(--lx-h2,14pt);font-weight:700;margin:1.2em 0 .5em;line-height:1.2}
+html.lx #documentArea h3{font-size:var(--lx-h3,12pt);font-weight:700;font-style:normal;margin:1.1em 0 .4em;line-height:1.2}
+html.lx #documentArea h1.eq-unnum{text-align:left}
+html.lx #documentArea > p:not([class]){text-indent:var(--lx-pi,0);margin:0 0 var(--lx-ps,0)}
+html.lx #documentArea > p:not([class]):not([style*="text-align"]){text-align:justify}
+html.lx #documentArea > h1 + p:not([class]),html.lx #documentArea > h2 + p:not([class]),html.lx #documentArea > h3 + p:not([class]){text-indent:0}
+html.lx #documentArea ul,html.lx #documentArea ol{margin:0 0 .6em}
+html.lx .eq-title{font-size:1.73em;font-weight:400;margin-top:1em}
+html.lx .eq-subtitle{font-size:1.2em;color:inherit}
+html.lx .eq-caption{font-size:.9em}
+
+/* numbers off for a single heading (h1 already handled in thesis2.css) */
+html.hnum #documentArea h2.eq-unnum::before,html.hnum #documentArea h3.eq-unnum::before{content:none}
+
+@media print{
+  html.lx.pm #documentArea{font-family:var(--lx-ff,"Latin Modern Roman",Cambria,"Times New Roman",serif)!important;font-size:var(--lx-fs,12pt)!important;line-height:var(--lx-lh,1.2)!important}
+}

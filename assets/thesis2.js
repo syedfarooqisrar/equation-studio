@@ -235,6 +235,7 @@
     }, { okText: 'Apply' });
   }
   on($('#btnPageSetup'), 'click', openPageSetup);
+  window.eqApplyMargins = applyMargins;
   applyMargins();
 
   /* ---------- BibTeX import (used by Manage Sources) ---------- */
@@ -274,7 +275,7 @@
         if (src[i] === '}') { depth--; i++; }
       }
       re.lastIndex = i;
-      if (fields.title) out.push(bibToSource(type, fields));
+      if (fields.title) { const s0 = bibToSource(type, fields); s0.key = m[2]; out.push(s0); }
       if (out.length >= 500) break;
     }
     return out;

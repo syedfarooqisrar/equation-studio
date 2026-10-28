@@ -17,13 +17,16 @@ if not exist assets\solver-ui.js (
   exit /b 1
 )
 
+set "TECDATA="
+if exist tools\tectonic\tectonic.exe set "TECDATA=--add-data tools\tectonic;tectonic"
 python -m PyInstaller --noconfirm --clean --windowed --name EquationStudio --icon icon.ico ^
   --add-data "word_style_editor.html;." ^
   --add-data "mathlive.min.js;." ^
   --add-data "assets;assets" ^
   --add-data "fonts;fonts" ^
   --add-data "icon.ico;." ^
-  --hidden-import studio_app --hidden-import solver_engine ^
+  --hidden-import studio_app --hidden-import solver_engine --hidden-import tex_service --hidden-import PySide6.QtPdf ^
+  %TECDATA% ^
   --collect-all sympy --collect-all mpmath ^
   main.py
 

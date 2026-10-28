@@ -178,6 +178,7 @@
   };
   window.eqClearPrintDeco = function () { const b = $('#printDeco'); if (b) b.innerHTML = ''; };
 
+  window.eqSetHF = function (o) { hf = Object.assign({}, hf, o); store.set('eqHF', JSON.stringify(hf)); renderDeco(); };
   function openHF() {
     eqUI.form('Header & Footer', [
       { id: 'header', label: 'Header text', value: hf.header, placeholder: 'e.g. Thesis title', hint: 'You can use {page}, {pages} and {date}' },

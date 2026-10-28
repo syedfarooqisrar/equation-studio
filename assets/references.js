@@ -144,6 +144,7 @@
     return n.length <= 20 ? n.slice(0, -1).join(', ') + ', & ' + n[n.length - 1] : n.slice(0, 19).join(', ') + ', ... ' + n[n.length - 1];
   }
   function entry(s, style) {
+    if (s.raw) return esc(s.raw);
     const au = auStr(parseAuthors(s.authors), style) || (style === 'ieee' ? 'Anonymous' : 'Anonymous');
     const y = esc(s.year || 'n.d.'), t = esc(s.title), c = esc(s.container), p = esc(s.publisher), url = esc(s.url), vol = esc(s.volume), iss = esc(s.issue), pg = esc(s.pages);
     let out;
