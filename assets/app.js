@@ -842,7 +842,7 @@ function layoutBlocks(gap){
     const need = h + (/^H[1-3]$/.test(el.tagName) && nx ? Math.min(nx.offsetHeight, 70) : 0);   // a heading stays with what follows
     const pushTo = np => {
       const nt = np * S + PAGE_M;
-      rules.push(`#documentArea > :nth-child(${i + 1}){margin-top:${Math.max(0, nt - prevBottom)}px}`);
+      rules.push(`#documentArea > :nth-child(${i + 1}){margin-top:${Math.max(0, nt - prevBottom)}px!important}`);
       shift += nt - top; top = nt; page = np;
     };
     if (top + need > page * S + g.H - PAGE_M + 0.5 && top > page * S + PAGE_M + 0.5) pushTo(page + 1);
