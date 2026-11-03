@@ -25,7 +25,7 @@ python -m PyInstaller --noconfirm --clean --windowed --name EquationStudio --ico
   --add-data "assets;assets" ^
   --add-data "fonts;fonts" ^
   --add-data "icon.ico;." ^
-  --hidden-import studio_app --hidden-import solver_engine --hidden-import tex_service --hidden-import PySide6.QtPdf ^
+  --hidden-import studio_app --hidden-import solver_engine --hidden-import tex_service --hidden-import PySide6.QtPdf --hidden-import export_service --hidden-import pdf_tools --hidden-import pypdf ^
   %TECDATA% ^
   --collect-all sympy --collect-all mpmath ^
   main.py

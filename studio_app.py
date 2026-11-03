@@ -26,6 +26,7 @@ import multiprocessing as mp
 from solver_engine import worker_main  # light module: SymPy is only imported inside the worker process
 from tex_service import TexService
 from export_service import ExportService
+from pdf_tools import PdfTools
 
 try:
     import win32clipboard  # best compatibility with Word, Paint, browsers
@@ -348,6 +349,7 @@ class EquationStudio(QWidget):
         self.solver_timer.start(120)
         self.tex = TexService(DATA_DIR, RES_DIR, self.send_tex, self.toast, self)
         self.exporter = ExportService(DATA_DIR, RES_DIR, self.toast, self)
+        self.pdf_tools = PdfTools(CAPTURE_DIR, self.toast, self.open_path, self)
 
     # ---------- window size / position ----------
     def place_window(self) -> None:
@@ -396,8 +398,8 @@ class EquationStudio(QWidget):
     # ---------- polling the page for button clicks ----------
     def poll_triggers(self) -> None:
         self.js(
-            "(function(){var r=window.pyCaptureRequest||'',s=window.pySolveRequest||'',t=window.pyTexRequest||'',x=window.pyExportRequest||'';"
-            "window.pyCaptureRequest='';window.pySolveRequest='';window.pyTexRequest='';window.pyExportRequest='';return JSON.stringify({r:r,s:s,t:t,x:x});})();",
+            "(function(){var r=window.pyCaptureRequest||'',s=window.pySolveRequest||'',t=window.pyTexRequest||'',x=window.pyExportRequest||'',p=window.pyPdfRequest||'';"
+            "window.pyCaptureRequest='';window.pySolveRequest='';window.pyTexRequest='';window.pyExportRequest='';window.pyPdfRequest='';return JSON.stringify({r:r,s:s,t:t,x:x,p:p});})();",
             self.handle_poll,
         )
 
@@ -412,6 +414,8 @@ class EquationStudio(QWidget):
             self.handle_tex(data["t"])
         if data.get("x"):
             self.handle_export(data["x"])
+        if data.get("p"):
+            self.handle_pdf(data["p"])
         self.handle_request(data.get("r", ""))
 
     def handle_solve(self, raw) -> None:
@@ -442,6 +446,14 @@ class EquationStudio(QWidget):
             return
         if isinstance(req, dict):
             self.exporter.handle(req, self)
+
+    def handle_pdf(self, raw) -> None:
+        try:
+            req = json.loads(raw)
+        except ValueError:
+            return
+        if isinstance(req, dict):
+            self.pdf_tools.handle(req, self)
 
     def send_tex(self, res: dict) -> None:
         try:

@@ -32,6 +32,7 @@
 <script src="assets/latex-import.js" defer></script>
 <script src="assets/latex-style.js" defer></script>
 <script src="assets/export.js" defer></script>
+<script src="assets/pdf-tools.js" defer></script>
 <style id="pgStyle"></style>
 </head>
 <body>
@@ -62,6 +63,7 @@
       <button class="tab" data-tab="thesis" role="tab" aria-selected="false">Thesis</button>
       <button class="tab" data-tab="equation" role="tab" aria-selected="false">Equation</button>
       <button class="tab" data-tab="symbols" role="tab" aria-selected="false">Symbols</button>
+      <button class="tab" data-tab="tools" role="tab" aria-selected="false">Tools</button>
       <button class="icon-btn" id="ribbonToggle" title="Collapse / expand ribbon"></button>
     </div>
     <div class="ribbon-panels">
@@ -254,6 +256,20 @@
             <button class="rbtn" id="copyLatexBtn" title="Copy equations as LaTeX (Ctrl+Shift+L)"><span class="ri" data-icon="code" data-size="22"></span><span class="rl">Copy LaTeX</span></button>
             <button class="rbtn" id="copyMathmlBtn" title="Copy equations as MathML"><span class="ri"><span class="ico-text">&lt;/&gt;</span></span><span class="rl">Copy MathML</span></button>
           </div><div class="rgroup-label">Conversions</div></div>
+        </div>
+      </div>
+
+      <!-- ---------- TOOLS ---------- -->
+      <div id="tabTools" class="hidden">
+        <div class="ribbon-scroll">
+          <div class="rgroup"><div class="rgroup-items">
+            <button class="rbtn" id="toolMerge" title="Join several PDFs into one"><span class="ri" data-icon="copy" data-size="22"></span><span class="rl">Merge</span></button>
+            <button class="rbtn" id="toolExtract" title="Keep only the pages you choose"><span class="ri" data-icon="page" data-size="22"></span><span class="rl">Extract</span></button>
+            <button class="rbtn" id="toolEach" title="Save every page as its own PDF"><span class="ri" data-icon="folder" data-size="22"></span><span class="rl">Split pages</span></button>
+            <button class="rbtn" id="toolArrange" title="Change page order, remove or rotate pages"><span class="ri" data-icon="list" data-size="22"></span><span class="rl">Rearrange</span></button>
+            <button class="rbtn" id="toolCompress" title="Make a PDF smaller"><span class="ri" data-icon="save" data-size="22"></span><span class="rl">Compress</span></button>
+            <button class="rbtn" id="toolCompare" title="Compare the text of two PDFs"><span class="ri" data-icon="code" data-size="22"></span><span class="rl">Compare</span></button>
+          </div><div class="rgroup-label">PDF</div></div>
         </div>
       </div>
 

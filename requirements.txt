@@ -3,3 +3,4 @@ pywin32>=306
 pyinstaller>=6.15
 pillow>=10.0
 sympy>=1.13
+pypdf>=5.0
