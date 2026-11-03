@@ -273,8 +273,11 @@ class MergeDialog(QDialog):
         self.setWindowTitle("Merge PDFs")
         self.resize(580, 380)
         self.start_dir = start_dir
+        self.flt = PDF_FILTER
+        self.min_files = 2
         lay = QVBoxLayout(self)
-        lay.addWidget(QLabel("PDFs are joined from top to bottom. Add at least two files. You can drag to reorder."))
+        self.intro = QLabel("PDFs are joined from top to bottom. Add at least two files. You can drag to reorder.")
+        lay.addWidget(self.intro)
         self.list = QListWidget(self)
         self.list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
         self.list.setDragDropMode(QListWidget.DragDropMode.InternalMove)
@@ -295,10 +298,10 @@ class MergeDialog(QDialog):
         self.sync()
 
     def sync(self) -> None:
-        self.buttons.button(QDialogButtonBox.StandardButton.Ok).setEnabled(self.list.count() >= 2)
+        self.buttons.button(QDialogButtonBox.StandardButton.Ok).setEnabled(self.list.count() >= self.min_files)
 
     def add(self, _checked: bool = False) -> None:
-        paths, _ = QFileDialog.getOpenFileNames(self, "Add PDFs", self.start_dir, PDF_FILTER)
+        paths, _ = QFileDialog.getOpenFileNames(self, "Add files", self.start_dir, self.flt)
         for p in paths:
             item = QListWidgetItem(f"{os.path.basename(p)}    —    {os.path.dirname(p)}")
             item.setData(Qt.ItemDataRole.UserRole, p)

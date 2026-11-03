@@ -27,6 +27,7 @@ from solver_engine import worker_main  # light module: SymPy is only imported in
 from tex_service import TexService
 from export_service import ExportService
 from pdf_tools import PdfTools
+from convert_tools import CONV_OPS, ConvertTools
 
 try:
     import win32clipboard  # best compatibility with Word, Paint, browsers
@@ -350,6 +351,7 @@ class EquationStudio(QWidget):
         self.tex = TexService(DATA_DIR, RES_DIR, self.send_tex, self.toast, self)
         self.exporter = ExportService(DATA_DIR, RES_DIR, self.toast, self)
         self.pdf_tools = PdfTools(CAPTURE_DIR, self.toast, self.open_path, self)
+        self.convert_tools = ConvertTools(CAPTURE_DIR, self.toast, self.open_path, DATA_DIR, RES_DIR, self)
 
     # ---------- window size / position ----------
     def place_window(self) -> None:
@@ -453,7 +455,12 @@ class EquationStudio(QWidget):
         except ValueError:
             return
         if isinstance(req, dict):
-            self.pdf_tools.handle(req, self)
+            try:
+                tool = self.convert_tools if req.get("op") in CONV_OPS else self.pdf_tools
+                tool.handle(req, self)
+            except Exception as e:  # noqa: BLE001
+                log.exception("PDF/convert request failed")
+                self.toast(f"Error: {type(e).__name__}: {str(e)[:120]}", "error")
 
     def send_tex(self, res: dict) -> None:
         try:
