@@ -22,4 +22,4 @@ dist/
 *.zip
 
 tex_cache/
-tools/tectonic/
+tools/tectonic/tools/pandoc/
