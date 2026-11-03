@@ -18,10 +18,11 @@ from PySide6.QtWidgets import QDialog, QDialogButtonBox, QFileDialog
 
 from export_service import FORMATS
 from pdf_tools import PDF_FILTER, MergeDialog, PdfTools, UserError, _drop, open_reader, same_path
+from ocr_tools import OcrTools
 
 log = logging.getLogger("EquationStudio.convert")
 
-CONV_OPS = {"word2pdf", "pdf2word", "doc2doc", "img2pdf", "pdf2img"}
+CONV_OPS = {"word2pdf", "pdf2word", "doc2doc", "img2pdf", "pdf2img", "ocr"}
 NO_WINDOW = 0x08000000 if os.name == "nt" else 0
 WORD_FILTER = "Word / OpenDocument (*.docx *.doc *.odt *.rtf)"
 DOC_FILTER = "Documents (*.docx *.odt *.html *.htm *.md *.tex *.epub *.txt)"
@@ -260,11 +261,14 @@ class ConvertTools(PdfTools):
         super().__init__(capture_dir, toast, open_path, parent)
         self.dirs = (data_dir, res_dir)
         self._img: dict | None = None
+        self.ocr = OcrTools(capture_dir, toast, open_path, data_dir, res_dir, self)
 
     def handle(self, req: dict, parent) -> None:
         if self.busy:
             return self.toast("Another job is still running. Please wait.", "warn")
         op = req.get("op")
+        if op == "ocr":
+            return self.ocr.handle(req, parent)
         if op not in CONV_OPS:
             return
         target = req.get("target") if req.get("target") in FORMATS else "docx"
