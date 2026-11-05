@@ -68,6 +68,7 @@
     if (res.ok === false) return showToast(res.error || 'Could not open the file', 'error');
     if (res.op === 'restore' && res.snapshot) post({ type: 'load-snapshot', snapshot: res.snapshot });
     else if (res.op === 'open') post({ type: 'load', res });
+    else if (res.op === 'tables') chooseTables(res);
   };
 
   const bind = (id, fn) => { const b = document.getElementById(id); if (b) on(b, 'click', fn); };
@@ -77,6 +78,42 @@
   bind('dtX', () => exportAs('xlsx'));
   bind('dtC', () => exportAs('csv'));
   bind('dtJ', () => exportAs('json'));
+
+  /* Tables from a PDF / Word / web page: options -> Python finds them -> you tick the ones you want */
+  function startTables() {
+    eqUI.form('Tables from a file', [
+      { id: 'mode', label: 'Tables in a PDF look like', type: 'select', value: 'lined',
+        options: [['lined', 'Boxes or lines around the cells (most reports)'], ['text', 'No lines, columns line up by spacing']],
+        hint: 'Word and web page files do not need this.' },
+      { id: 'numbers', label: 'Turn numbers like 1,234 and (500) and ۱۲۳ into real numbers', type: 'checkbox', value: true }
+    ], v => {
+      toPython({ op: 'tables', mode: v.mode, numbers: !!v.numbers });
+    }, { width: '460px', okText: 'Choose file…' });
+  }
+  function chooseTables(res) {
+    const tabs = res.tables || [];
+    if (!tabs.length) {
+      return showToast(res.scanned ? 'No text found. This looks like a scanned file: use Tools → Scanned PDF first.' : 'No tables were found in this file.', 'warn');
+    }
+    close();                                            // the dialog must not hide behind the spreadsheet
+    const shown = tabs.slice(0, 30);
+    if (tabs.length > shown.length || res.truncated) showToast('Showing the first ' + shown.length + ' tables.', 'warn');
+    const fields = shown.map((t, i) => ({
+      id: 't' + i, type: 'checkbox', value: i < 10,
+      label: t.title + '  (' + t.rows + ' rows × ' + t.cols + ' columns)  ' + (t.preview ? '“' + t.preview + '”' : '')
+    }));
+    fields.unshift({ id: 'how', label: 'Put them in the spreadsheet', type: 'select', value: 'append',
+      options: [['append', 'as new sheets'], ['replace', 'in place of the current sheet']] });
+    eqUI.form('Tables found: ' + tabs.length, fields, v => {
+      const pick = shown.filter((t, i) => v['t' + i]);
+      if (!pick.length) { showToast('Tick at least one table', 'warn'); return false; }
+      const payload = { name: res.name, sheets: pick.map(t => t.sheet) };
+      const go = () => post({ type: v.how === 'replace' ? 'load' : 'append', res: payload });
+      const fresh = !ready;                              // a just-started spreadsheet first restores your last sheet
+      whenReady(() => (fresh ? setTimeout(go, 1500) : go()));
+    }, { width: '540px', okText: 'Add to spreadsheet' });
+  }
+  bind('dtTables', startTables);
   bind('dsBack', close);
   bind('dsOpen', () => (ready ? toPython({ op: 'open' }) : showToast('The spreadsheet is still starting', 'warn')));
   bind('dsSaveX', () => (ready ? post({ type: 'export', kind: 'xlsx' }) : showToast('The spreadsheet is still starting', 'warn')));

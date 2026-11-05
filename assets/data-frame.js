@@ -150,6 +150,28 @@
     else univer.createUnit(UniverCore.UniverInstanceType.UNIVER_SHEET, data);
   }
 
+  /* Add sheets to the current workbook (a still-empty workbook is simply replaced) */
+  function isBlank(snap) {
+    return Object.values(snap.sheets || {}).every(sh => !sh.cellData || Object.keys(sh.cellData).length === 0);
+  }
+  function appendWorkbook(res) {
+    const built = buildWorkbook(res);
+    const wb = api.getActiveWorkbook();
+    const snap = wb ? snapshotOf(wb) : null;
+    if (!snap || isBlank(snap)) { replaceWorkbook(built); return; }
+    const used = new Set(Object.values(snap.sheets).map(s => String(s.name).toLowerCase()));
+    built.sheetOrder.forEach((bid, i) => {
+      const sh = built.sheets[bid];
+      let name = sh.name, n = 2;
+      while (used.has(name.toLowerCase())) name = sh.name.slice(0, 26) + ' (' + (n++) + ')';
+      used.add(name.toLowerCase());
+      const id = 'tbl' + Date.now().toString(36) + i;
+      snap.sheets[id] = Object.assign({}, sh, { id, name });
+      snap.sheetOrder.push(id);
+    });
+    replaceWorkbook(snap);
+  }
+
   /* ---------- autosave: the whole Univer snapshot (all formatting included) goes to Python ---------- */
   function autosaveNow() {
     if (!api) return;
@@ -180,6 +202,9 @@
         replaceWorkbook(buildWorkbook(m.res));
         const n = m.res.sheets.reduce((a, s) => a + s.cells.length, 0);
         tell({ type: 'status', text: (m.res.name || 'File') + ': ' + m.res.sheets.length + ' sheet(s), ' + n.toLocaleString('en-US') + ' cells' });
+      } else if (m.type === 'append' && m.res && Array.isArray(m.res.sheets)) {
+        appendWorkbook(m.res);
+        tell({ type: 'status', text: m.res.sheets.length + ' table(s) added' });
       } else if (m.type === 'load-snapshot' && m.snapshot && m.snapshot.sheets) {
         replaceWorkbook(m.snapshot);
         tell({ type: 'status', text: 'Your last sheet was restored' });

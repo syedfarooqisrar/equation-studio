@@ -17,6 +17,8 @@ from decimal import Decimal
 from PySide6.QtCore import QObject
 from PySide6.QtWidgets import QFileDialog
 
+from table_extract import TableService
+
 log = logging.getLogger("EquationStudio.data")
 
 MAX_FILE_BYTES = 40 * 1024 * 1024
@@ -434,6 +436,7 @@ class DataService(QObject):
         self.toast = toast
         self.send = send
         self.autosave_path = os.path.join(data_dir, "data_autosave.json")
+        self.tables = TableService(toast, send, self)
         self.last_dir = os.path.join(os.path.expanduser("~"), "Documents")
         self._warned = False
 
@@ -443,6 +446,8 @@ class DataService(QObject):
             return self.autosave(req)
         if op == "restore":
             return self.restore()
+        if op == "tables":
+            return self.tables.handle(req, parent)
         try:
             if op == "open":
                 self.open_file(parent)
