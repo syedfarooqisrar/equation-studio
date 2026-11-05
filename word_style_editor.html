@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="assets/thesis2.css">
 <link rel="stylesheet" href="assets/latex-studio.css">
 <link rel="stylesheet" href="assets/latex-style.css">
+<link rel="stylesheet" href="assets/data-studio.css">
 <script src="mathlive.min.js"></script>
 <script src="assets/mathlive-config.js"></script>
 <script src="assets/equation-data.js" defer></script>
@@ -35,6 +36,7 @@
 <script src="assets/pdf-tools.js" defer></script>
 <script src="assets/convert-tools.js" defer></script>
 <script src="assets/ocr-tools.js" defer></script>
+<script src="assets/data-studio.js" defer></script>
 <style id="pgStyle"></style>
 </head>
 <body>
@@ -66,6 +68,7 @@
       <button class="tab" data-tab="equation" role="tab" aria-selected="false">Equation</button>
       <button class="tab" data-tab="symbols" role="tab" aria-selected="false">Symbols</button>
       <button class="tab" data-tab="tools" role="tab" aria-selected="false">Tools</button>
+      <button class="tab" data-tab="data" role="tab" aria-selected="false">Data</button>
       <button class="icon-btn" id="ribbonToggle" title="Collapse / expand ribbon"></button>
     </div>
     <div class="ribbon-panels">
@@ -282,6 +285,24 @@
           <div class="rgroup"><div class="rgroup-items">
             <button class="rbtn accent" id="toolOcr" title="Read the text of a scanned PDF (OCR)"><span class="ri" data-icon="code" data-size="22"></span><span class="rl">Scanned PDF</span></button>
           </div><div class="rgroup-label">OCR</div></div>
+          <div class="rgroup"><div class="rgroup-items">
+            <button class="rbtn accent" id="toolDataStudio" title="Spreadsheet: open, edit and save .xlsx / .csv (test version)"><span class="ri" data-icon="list" data-size="22"></span><span class="rl">Data Studio</span></button>
+          </div><div class="rgroup-label">Data</div></div>
+        </div>
+      </div>
+
+      <!-- ---------- DATA ---------- -->
+      <div id="tabData" class="hidden">
+        <div class="ribbon-scroll">
+          <div class="rgroup"><div class="rgroup-items">
+            <button class="rbtn accent" id="dtStudio" title="Open the spreadsheet"><span class="ri" data-icon="list" data-size="22"></span><span class="rl">Data Studio</span></button>
+            <button class="rbtn" id="dtOpen" title="Open an Excel, CSV or JSON file"><span class="ri" data-icon="folder" data-size="22"></span><span class="rl">Open file</span></button>
+          </div><div class="rgroup-label">Spreadsheet</div></div>
+          <div class="rgroup"><div class="rgroup-items">
+            <button class="rbtn" id="dtX" title="Save as an Excel file"><span class="ri" data-icon="save" data-size="22"></span><span class="rl">Save .xlsx</span></button>
+            <button class="rbtn" id="dtC" title="Save as a CSV file"><span class="ri" data-icon="save" data-size="22"></span><span class="rl">Save .csv</span></button>
+            <button class="rbtn" id="dtJ" title="Save as a JSON file"><span class="ri" data-icon="code" data-size="22"></span><span class="rl">Save .json</span></button>
+          </div><div class="rgroup-label">Save as</div></div>
         </div>
       </div>
 
@@ -350,6 +371,20 @@
         <div class="tx-log-head"><button type="button" id="txTabProb" class="on">Problems (0)</button><button type="button" id="txTabLog">Log</button><span class="tx-sp"></span><button type="button" id="txLogToggle" title="Show / hide">▾</button></div>
         <div class="tx-log-body"><div id="txProblems"></div><pre id="txLogRaw" hidden></pre></div>
       </div>
+    </section>
+    <section id="dataStudio" class="no-focus-steal" aria-label="Data Studio">
+      <div class="ds-bar">
+        <button class="btn" id="dsBack" type="button">← Document</button>
+        <b>Data Studio</b><span class="ds-tag">test version</span>
+        <span class="ds-sp"></span>
+        <span id="dsStatus"></span>
+        <button class="btn" id="dsNew" type="button">New</button>
+        <button class="btn" id="dsOpen" type="button">Open…</button>
+        <button class="btn btn-primary" id="dsSaveX" type="button">Save .xlsx</button>
+        <button class="btn" id="dsSaveC" type="button">Save .csv</button>
+        <button class="btn" id="dsSaveJ" type="button">Save .json</button>
+      </div>
+      <div class="ds-body"><iframe id="dsFrame" title="Spreadsheet"></iframe></div>
     </section>
     <div id="findBar" class="no-focus-steal" hidden>
       <div class="fb-row">

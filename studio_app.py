@@ -28,6 +28,7 @@ from tex_service import TexService
 from export_service import ExportService
 from pdf_tools import PdfTools
 from convert_tools import CONV_OPS, ConvertTools
+from data_service import DataService
 
 try:
     import win32clipboard  # best compatibility with Word, Paint, browsers
@@ -272,6 +273,10 @@ class EditorPage(QWebEnginePage):
         log.info("JS Console: %s (line %s)", message, line)
 
     def acceptNavigationRequest(self, url, nav_type, is_main_frame):  # noqa: N802
+        if not is_main_frame and url.isLocalFile():  # the Data Studio iframe: only pages inside the app folder
+            sub = os.path.normcase(os.path.abspath(url.toLocalFile()))
+            if sub.startswith(os.path.dirname(self._allowed) + os.sep):
+                return True
         if url.isLocalFile() and os.path.normcase(os.path.abspath(url.toLocalFile())) == self._allowed:
             return True
         log.warning("Blocked navigation to %s", url.toString()[:200])
@@ -352,6 +357,7 @@ class EquationStudio(QWidget):
         self.exporter = ExportService(DATA_DIR, RES_DIR, self.toast, self)
         self.pdf_tools = PdfTools(CAPTURE_DIR, self.toast, self.open_path, self)
         self.convert_tools = ConvertTools(CAPTURE_DIR, self.toast, self.open_path, DATA_DIR, RES_DIR, self)
+        self.data_studio = DataService(self.toast, self.send_data, DATA_DIR, self)
 
     # ---------- window size / position ----------
     def place_window(self) -> None:
@@ -400,8 +406,8 @@ class EquationStudio(QWidget):
     # ---------- polling the page for button clicks ----------
     def poll_triggers(self) -> None:
         self.js(
-            "(function(){var r=window.pyCaptureRequest||'',s=window.pySolveRequest||'',t=window.pyTexRequest||'',x=window.pyExportRequest||'',p=window.pyPdfRequest||'';"
-            "window.pyCaptureRequest='';window.pySolveRequest='';window.pyTexRequest='';window.pyExportRequest='';window.pyPdfRequest='';return JSON.stringify({r:r,s:s,t:t,x:x,p:p});})();",
+            "(function(){var r=window.pyCaptureRequest||'',s=window.pySolveRequest||'',t=window.pyTexRequest||'',x=window.pyExportRequest||'',p=window.pyPdfRequest||'',d=window.pyDataRequest||'';"
+            "window.pyCaptureRequest='';window.pySolveRequest='';window.pyTexRequest='';window.pyExportRequest='';window.pyPdfRequest='';window.pyDataRequest='';return JSON.stringify({r:r,s:s,t:t,x:x,p:p,d:d});})();",
             self.handle_poll,
         )
 
@@ -418,6 +424,8 @@ class EquationStudio(QWidget):
             self.handle_export(data["x"])
         if data.get("p"):
             self.handle_pdf(data["p"])
+        if data.get("d"):
+            self.handle_data(data["d"])
         self.handle_request(data.get("r", ""))
 
     def handle_solve(self, raw) -> None:
@@ -448,6 +456,20 @@ class EquationStudio(QWidget):
             return
         if isinstance(req, dict):
             self.exporter.handle(req, self)
+
+    def handle_data(self, raw) -> None:
+        try:
+            req = json.loads(raw)
+        except ValueError:
+            return
+        if isinstance(req, dict):
+            self.data_studio.handle(req, self)
+
+    def send_data(self, res: dict) -> None:
+        try:
+            self.js("window.onDataResult && window.onDataResult(" + json.dumps(res) + ");")
+        except (TypeError, ValueError):
+            log.exception("could not send the spreadsheet to the page")
 
     def handle_pdf(self, raw) -> None:
         try:

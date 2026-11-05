@@ -640,7 +640,7 @@ on($('#ribbonToggle'), 'click', () => setRibbonCollapsed(!$('#ribbon').classList
 $$('.tab').forEach(t => on(t, 'click', () => {
   if ($('#ribbon').classList.contains('collapsed')) setRibbonCollapsed(false);
   $$('.tab').forEach(x => { const a = x === t; x.classList.toggle('active', a); x.setAttribute('aria-selected', String(a)); });
-  ['home', 'insert', 'references', 'thesis', 'equation', 'symbols', 'tools'].forEach(n => {
+  ['home', 'insert', 'references', 'thesis', 'equation', 'symbols', 'tools', 'data'].forEach(n => {
     const p = $('#tab' + n.charAt(0).toUpperCase() + n.slice(1));
     if (p) p.classList.toggle('hidden', t.dataset.tab !== n);
   });

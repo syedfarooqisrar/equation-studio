@@ -23,3 +23,6 @@ dist/
 
 tex_cache/
 tools/tectonic/tools/pandoc/
+assets/vendor/
+data_autosave.json
+data_autosave.json.part
