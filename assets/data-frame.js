@@ -150,6 +150,29 @@
     else univer.createUnit(UniverCore.UniverInstanceType.UNIVER_SHEET, data);
   }
 
+  /* The cells the user has selected (the facade has changed names over versions, so try the known ones) */
+  function activeRange() {
+    const wb = api.getActiveWorkbook(), ws = wb && wb.getActiveSheet();
+    const tries = [
+      () => wb && wb.getActiveRange && wb.getActiveRange(),
+      () => ws && ws.getActiveRange && ws.getActiveRange(),
+      () => ws && ws.getSelection && ws.getSelection().getActiveRange()
+    ];
+    for (const t of tries) { try { const r = t(); if (r) return r; } catch (e) { /* next one */ } }
+    return null;
+  }
+  function readRange() {
+    const r = activeRange();
+    if (!r) throw new Error('Select some cells first.');
+    let vals = typeof r.getDisplayValues === 'function' ? r.getDisplayValues() : r.getValues();
+    if (!Array.isArray(vals) || !vals.length) throw new Error('Could not read the selected cells.');
+    if (vals.length * Math.max(...vals.map(x => x.length)) > 5000) throw new Error('That is too many cells for a document table (maximum 5,000).');
+    vals = vals.map(row => row.map(v => (v === null || v === undefined) ? '' : String(v)));
+    let name = 'Sheet';
+    try { name = api.getActiveWorkbook().getActiveSheet().getSheetName(); } catch (e) { /* keep the default */ }
+    return { values: vals, name };
+  }
+
   /* Add sheets to the current workbook (a still-empty workbook is simply replaced) */
   function isBlank(snap) {
     return Object.values(snap.sheets || {}).every(sh => !sh.cellData || Object.keys(sh.cellData).length === 0);
@@ -213,6 +236,9 @@
         lastSave = '';
         autosaveNow();
         tell({ type: 'status', text: 'New empty sheet' });
+      } else if (m.type === 'get-range') {
+        const rg = readRange();
+        tell({ type: 'range', name: rg.name, values: rg.values });
       } else if (m.type === 'flush') {
         autosaveNow();
       }

@@ -298,6 +298,8 @@
             <button class="rbtn accent" id="dtStudio" title="Open the spreadsheet"><span class="ri" data-icon="list" data-size="22"></span><span class="rl">Data Studio</span></button>
             <button class="rbtn" id="dtOpen" title="Open an Excel, CSV or JSON file"><span class="ri" data-icon="folder" data-size="22"></span><span class="rl">Open file</span></button>
             <button class="rbtn accent" id="dtTables" title="Find the tables in a PDF, Word or web page file"><span class="ri" data-icon="page" data-size="22"></span><span class="rl">Tables from file</span></button>
+            <button class="rbtn" id="dtFromDoc" title="Open the table the cursor is in, in Data Studio"><span class="ri" data-icon="step" data-size="22"></span><span class="rl">Table → Grid</span></button>
+            
           </div><div class="rgroup-label">Spreadsheet</div></div>
           <div class="rgroup"><div class="rgroup-items">
             <button class="rbtn" id="dtX" title="Save as an Excel file"><span class="ri" data-icon="save" data-size="22"></span><span class="rl">Save .xlsx</span></button>
@@ -379,6 +381,7 @@
         <b>Data Studio</b><span class="ds-tag">test version</span>
         <span class="ds-sp"></span>
         <span id="dsStatus"></span>
+        <button class="btn" id="dsToDoc" type="button" title="Put the selected cells into the document as a table">→ Document</button>
         <button class="btn" id="dsNew" type="button">New</button>
         <button class="btn" id="dsOpen" type="button">Open…</button>
         <button class="btn btn-primary" id="dsSaveX" type="button">Save .xlsx</button>
